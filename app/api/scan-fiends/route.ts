@@ -11,6 +11,48 @@ const alchemy = new Alchemy({
 // (Replace this with your actual contract later to highlight your specific NFTs)
 const FIEND_CONTRACT_ADDRESS = "0xYourContractAddressHere".toLowerCase();
 
+// ---------------------------------------------------------
+// CACHING - Store results for 5 minutes to reduce API calls
+// ---------------------------------------------------------
+type CacheEntry = {
+  data: any;
+  timestamp: number;
+};
+
+const cache = new Map<string, CacheEntry>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+function getCacheKey(fid: string | null, username: string | null): string {
+  return fid ? `fid:${fid}` : `username:${username?.toLowerCase()}`;
+}
+
+function getFromCache(key: string): any | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  
+  // Check if cache has expired
+  if (Date.now() - entry.timestamp > CACHE_TTL) {
+    cache.delete(key);
+    return null;
+  }
+  
+  return entry.data;
+}
+
+function setCache(key: string, data: any): void {
+  cache.set(key, { data, timestamp: Date.now() });
+  
+  // Clean up old entries (prevent memory leak)
+  if (cache.size > 1000) {
+    const now = Date.now();
+    for (const [k, v] of cache.entries()) {
+      if (now - v.timestamp > CACHE_TTL) {
+        cache.delete(k);
+      }
+    }
+  }
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const fid = searchParams.get('fid');
@@ -19,6 +61,15 @@ export async function GET(req: NextRequest) {
   if (!fid && !username) {
     return NextResponse.json({ error: "Missing FID or username parameter" }, { status: 400 });
   }
+
+  // Check cache first
+  const cacheKey = getCacheKey(fid, username);
+  const cachedResult = getFromCache(cacheKey);
+  if (cachedResult) {
+    console.log(`Cache HIT for ${cacheKey}`);
+    return NextResponse.json(cachedResult);
+  }
+  console.log(`Cache MISS for ${cacheKey}`);
 
   try {
     // ---------------------------------------------------------
@@ -137,7 +188,7 @@ export async function GET(req: NextRequest) {
     // Sort Results: Put "Fiend" NFTs at the top
     allNfts.sort((a, b) => Number(b.isFiend) - Number(a.isFiend));
 
-    return NextResponse.json({
+    const result = {
       user: user.username,
       fid: user.fid,
       displayName: user.display_name,
@@ -145,7 +196,12 @@ export async function GET(req: NextRequest) {
       walletCount: uniqueWallets.length,
       totalFound: allNfts.length,
       nfts: allNfts,
-    });
+    };
+
+    // Save to cache before returning
+    setCache(cacheKey, result);
+    
+    return NextResponse.json(result);
 
   } catch (error) {
     console.error("Full Scan Error:", error);
