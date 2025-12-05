@@ -15,17 +15,17 @@ const geistMono = Geist_Mono({
 const appUrl = process.env.NEXT_PUBLIC_URL || "https://fiend-finder.vercel.app";
 
 export const metadata: Metadata = {
-  title: "Soul Scanner - NFT Viewer",
-  description: "View NFTs across all your linked wallets on Base",
+  title: "Your Base NFTs",
+  description: "View your NFT collection on Base",
   openGraph: {
-    title: "Soul Scanner",
-    description: "View NFTs across all your linked wallets on Base",
+    title: "Your Base NFTs",
+    description: "View your NFT collection on Base",
     images: [`${appUrl}/og-image.png`],
   },
   other: {
     "fc:frame": "vNext",
     "fc:frame:image": `${appUrl}/og-image.png`,
-    "fc:frame:button:1": "Scan My NFTs",
+    "fc:frame:button:1": "View My NFTs",
     "fc:frame:post_url": `${appUrl}/api/frame`,
   },
 };

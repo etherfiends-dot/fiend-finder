@@ -90,9 +90,8 @@ export default function Home() {
         {/* Header */}
         <div className="text-center mb-6 pt-4">
           <h1 className="text-3xl font-black bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-transparent tracking-tighter">
-            SOUL SCANNER
+            Your Base NFTs
           </h1>
-          <p className="text-slate-400 text-sm mt-1">Your NFT collection on Base</p>
         </div>
 
         {/* Error */}
