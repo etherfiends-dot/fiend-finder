@@ -13,6 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 const appUrl = process.env.NEXT_PUBLIC_URL || "https://fiend-finder.vercel.app";
+const cacheBuster = `v=${Date.now()}`;
 
 export const metadata: Metadata = {
   title: "Your Base NFTs",
@@ -20,11 +21,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Your Base NFTs",
     description: "View your NFT collection on Base",
-    images: [`${appUrl}/og-image.png`],
+    images: [`${appUrl}/og-image.png?${cacheBuster}`],
   },
   other: {
     "fc:frame": "vNext",
-    "fc:frame:image": `${appUrl}/og-image.png`,
+    "fc:frame:image": `${appUrl}/og-image.png?${cacheBuster}`,
     "fc:frame:button:1": "View My NFTs",
     "fc:frame:post_url": `${appUrl}/api/frame`,
   },
