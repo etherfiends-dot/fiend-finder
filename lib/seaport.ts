@@ -84,12 +84,15 @@ export async function createBundleOrder(
  */
 export async function fulfillOrder(
   seaport: Seaport,
-  order: SeaportOrder
+  order: SeaportOrder,
+  buyerAddress?: string
 ): Promise<{ hash: string; wait: () => Promise<unknown> }> {
-  const { executeAllActions } = await seaport.fulfillOrder({
-    order,
-    accountAddress: await seaport.provider.getSigner().then(s => s.getAddress()),
-  });
+  const fulfillOptions: { order: SeaportOrder; accountAddress?: string } = { order };
+  if (buyerAddress) {
+    fulfillOptions.accountAddress = buyerAddress;
+  }
+  
+  const { executeAllActions } = await seaport.fulfillOrder(fulfillOptions);
 
   const transaction = await executeAllActions();
   // Return with consistent interface

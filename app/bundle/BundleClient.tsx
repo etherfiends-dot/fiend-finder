@@ -101,7 +101,7 @@ function BundleContent() {
       setPurchaseStep('confirming');
 
       // Fulfill the order
-      const tx = await fulfillOrder(seaport, bundleData.seaportOrder);
+      const tx = await fulfillOrder(seaport, bundleData.seaportOrder, buyerAddress);
       
       setPurchaseStep('processing');
       setTxHash(tx.hash);
