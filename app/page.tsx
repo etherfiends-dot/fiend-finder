@@ -67,6 +67,11 @@ export default function Home() {
   const [swapUsername, setSwapUsername] = useState('');
   const [mySwapNft, setMySwapNft] = useState<string | null>(null);
   const [theirSwapNft, setTheirSwapNft] = useState<string | null>(null);
+  
+  // Meme Generator state
+  const [memeNftIndex, setMemeNftIndex] = useState<number | null>(null);
+  const [memeTopText, setMemeTopText] = useState('');
+  const [memeBottomText, setMemeBottomText] = useState('');
 
   // LocalStorage keys
   const getStorageKey = (fid: number) => `hidden-nfts-${fid}`;
@@ -148,6 +153,42 @@ export default function Home() {
       else if (next.size < 5) next.add(key);
       return next;
     });
+  };
+
+  // Cast meme
+  const castMeme = async () => {
+    if (memeNftIndex === null || !scanResults || !currentUserFid) return;
+    if (!memeTopText && !memeBottomText) {
+      alert('Add some text to your meme!');
+      return;
+    }
+    
+    const nft = scanResults.nfts[memeNftIndex];
+    if (!nft) return;
+    
+    const encoded = btoa(JSON.stringify({
+      image: nft.image,
+      name: nft.name,
+      topText: memeTopText,
+      bottomText: memeBottomText,
+      user: scanResults.user,
+      displayName: scanResults.displayName,
+    }));
+    
+    const memeUrl = `${window.location.origin}/meme?data=${encoded}`;
+    const castText = memeTopText || memeBottomText || '😂';
+    
+    try {
+      if (sdk.actions.composeCast) {
+        await sdk.actions.composeCast({ text: castText, embeds: [memeUrl] });
+      } else {
+        const composeUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(castText)}&embeds[]=${encodeURIComponent(memeUrl)}`;
+        await sdk.actions.openUrl(composeUrl);
+      }
+    } catch {
+      await navigator.clipboard.writeText(`${castText}\n\n${memeUrl}`);
+      alert('Meme link copied to clipboard!');
+    }
   };
 
   // Cast triptych
@@ -471,6 +512,8 @@ export default function Home() {
   const renderFunTab = () => {
     if (!scanResults) return null;
     
+    const selectedMemeNft = memeNftIndex !== null ? scanResults.nfts[memeNftIndex] : null;
+    
     return (
       <div className="space-y-6">
         {/* Digital Frame */}
@@ -510,29 +553,72 @@ export default function Home() {
             </svg>
             <h3 className="font-bold text-white">Meme Generator</h3>
           </div>
-          <p className="text-slate-400 text-sm mb-4">Add meme text to your NFTs and cast them</p>
+          <p className="text-slate-400 text-sm mb-4">Select an NFT and add meme text</p>
           
           {/* NFT selector */}
           <div className="grid grid-cols-4 gap-2 mb-4">
             {scanResults.nfts.slice(0, 8).map((nft, i) => (
-              <button key={i} className="aspect-square rounded-lg overflow-hidden border-2 border-slate-700 hover:border-pink-500 transition-colors">
+              <button 
+                key={i} 
+                onClick={() => setMemeNftIndex(memeNftIndex === i ? null : i)}
+                className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${memeNftIndex === i ? 'border-pink-500 ring-2 ring-pink-500/50' : 'border-slate-700 hover:border-pink-500/50'}`}
+              >
                 <img src={nft.image} alt={nft.name} className="w-full h-full object-cover" />
               </button>
             ))}
           </div>
 
+          {/* Meme Preview */}
+          {selectedMemeNft && (
+            <div className="relative aspect-square bg-black rounded-lg mb-4 overflow-hidden">
+              <img src={selectedMemeNft.image} alt={selectedMemeNft.name} className="w-full h-full object-contain" />
+              {/* Top text overlay */}
+              {memeTopText && (
+                <div className="absolute top-2 left-0 right-0 text-center">
+                  <span className="text-white text-2xl font-black uppercase px-2" style={{ 
+                    textShadow: '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 2px 0 #000, 0 -2px 0 #000, 2px 0 0 #000, -2px 0 0 #000'
+                  }}>
+                    {memeTopText}
+                  </span>
+                </div>
+              )}
+              {/* Bottom text overlay */}
+              {memeBottomText && (
+                <div className="absolute bottom-2 left-0 right-0 text-center">
+                  <span className="text-white text-2xl font-black uppercase px-2" style={{ 
+                    textShadow: '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 2px 0 #000, 0 -2px 0 #000, 2px 0 0 #000, -2px 0 0 #000'
+                  }}>
+                    {memeBottomText}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
           <input
             type="text"
             placeholder="Top text..."
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder:text-slate-500 mb-2"
+            value={memeTopText}
+            onChange={(e) => setMemeTopText(e.target.value)}
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder:text-slate-500 mb-2 uppercase"
           />
           <input
             type="text"
             placeholder="Bottom text..."
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder:text-slate-500 mb-4"
+            value={memeBottomText}
+            onChange={(e) => setMemeBottomText(e.target.value)}
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder:text-slate-500 mb-4 uppercase"
           />
           
-          <button className="w-full py-3 bg-pink-500 hover:bg-pink-600 text-white rounded-lg font-medium flex items-center justify-center gap-2">
+          <button 
+            onClick={castMeme}
+            disabled={memeNftIndex === null || (!memeTopText && !memeBottomText)}
+            className={`w-full py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+              memeNftIndex !== null && (memeTopText || memeBottomText)
+                ? 'bg-pink-500 hover:bg-pink-600 text-white'
+                : 'bg-pink-500/30 text-white/50 cursor-not-allowed'
+            }`}
+          >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
             Cast Meme
           </button>
