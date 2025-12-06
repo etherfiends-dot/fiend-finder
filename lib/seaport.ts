@@ -95,8 +95,8 @@ export async function fulfillOrder(
   const { executeAllActions } = await seaport.fulfillOrder(fulfillOptions);
 
   const transaction = await executeAllActions();
-  // Return with consistent interface
-  return transaction as { hash: string; wait: () => Promise<unknown> };
+  // Return with consistent interface (cast via unknown for type safety)
+  return transaction as unknown as { hash: string; wait: () => Promise<unknown> };
 }
 
 /**
