@@ -1129,7 +1129,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
     return (
       <div className="space-y-6">
         {/* Meme Generator */}
-        <div className="bg-gradient-to-br from-pink-900/20 to-slate-900 p-4 rounded-xl border border-pink-500/30">
+        <div className="bg-gradient-to-br from-[#2b1027]/60 via-[#1a0f23] to-[#0c0a14] p-4 rounded-xl border border-[#8C52FF]/40">
           <div className="flex items-center gap-2 mb-2">
             <svg className="h-5 w-5 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1144,8 +1144,8 @@ const [templateError, setTemplateError] = useState<string | null>(null);
               onClick={() => { setMemeSource('nft'); setMemeTemplateIndex(null); }}
               className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
                 memeSource === 'nft'
-                  ? 'bg-pink-500 text-white border-pink-500'
-                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:border-pink-500/50'
+                  ? 'bg-[#8C52FF] text-white border-[#8C52FF]'
+                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:border-[#8C52FF]/50'
               }`}
             >
               Use My NFT
@@ -1154,8 +1154,8 @@ const [templateError, setTemplateError] = useState<string | null>(null);
               onClick={() => { setMemeSource('template'); setMemeNftIndex(null); }}
               className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
                 memeSource === 'template'
-                  ? 'bg-pink-500 text-white border-pink-500'
-                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:border-pink-500/50'
+                  ? 'bg-[#8C52FF] text-white border-[#8C52FF]'
+                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:border-[#8C52FF]/50'
               }`}
             >
               Use Template
@@ -1172,7 +1172,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
                     setMemeNftIndex(memeNftIndex === i ? null : i);
                     setMemeTemplateIndex(null);
                   }}
-                  className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${memeNftIndex === i ? 'border-pink-500 ring-2 ring-pink-500/50' : 'border-slate-700 hover:border-pink-500/50'}`}
+                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${memeNftIndex === i ? 'border-[#E53935] ring-2 ring-[#E53935]/50' : 'border-slate-700 hover:border-[#E53935]/50'}`}
                 >
                   <img src={nft.image} alt={nft.name} className="w-full h-full object-cover" />
                 </button>
@@ -1200,7 +1200,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
                       setMemeTemplateIndex(memeTemplateIndex === i ? null : i);
                       setMemeNftIndex(null);
                     }}
-                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${memeTemplateIndex === i ? 'border-pink-500 ring-2 ring-pink-500/50' : 'border-slate-700 hover:border-pink-500/50'}`}
+                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${memeTemplateIndex === i ? 'border-[#E53935] ring-2 ring-[#E53935]/50' : 'border-slate-700 hover:border-[#E53935]/50'}`}
                     title={tmpl.name}
                   >
                     <img src={tmpl.url} alt={tmpl.name} className="w-full h-full object-cover" />
@@ -1287,8 +1287,8 @@ const [templateError, setTemplateError] = useState<string | null>(null);
               onClick={() => setMemeTextMode('two-line')}
               className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
                 memeTextMode === 'two-line'
-                  ? 'bg-pink-500 text-white border-pink-500'
-                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:border-pink-500/50'
+                  ? 'bg-[#8C52FF] text-white border-[#8C52FF]'
+                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:border-[#8C52FF]/50'
               }`}
             >
               Top / Bottom
@@ -1297,8 +1297,8 @@ const [templateError, setTemplateError] = useState<string | null>(null);
               onClick={() => setMemeTextMode('quad')}
               className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
                 memeTextMode === 'quad'
-                  ? 'bg-pink-500 text-white border-pink-500'
-                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:border-pink-500/50'
+                  ? 'bg-[#8C52FF] text-white border-[#8C52FF]'
+                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:border-[#8C52FF]/50'
               }`}
             >
               4 Quadrants
@@ -1372,7 +1372,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
                   ? (memeTopText || memeBottomText)
                   : (memeTLText || memeTRText || memeBLText || memeBRText)
               )
-                ? 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white shadow-lg shadow-pink-500/25'
+                ? 'bg-gradient-to-r from-[#8C52FF] to-[#E53935] hover:from-[#7b47e5] hover:to-[#c7312f] text-white shadow-lg shadow-[#8C52FF]/30'
                 : 'bg-slate-700/50 text-white/50 cursor-not-allowed'
             }`}
           >
@@ -1384,7 +1384,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
         </div>
 
         {/* GIF Creator */}
-        <div className="bg-gradient-to-br from-cyan-900/20 to-slate-900 p-4 rounded-xl border border-cyan-500/30">
+        <div className="bg-gradient-to-br from-[#1a0f23] via-[#0f0d1b] to-[#0b0914] p-4 rounded-xl border border-[#E53935]/40">
           <div className="flex items-center gap-2 mb-2">
             <svg className="h-5 w-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2m0 2v2m0-2h2m8 0h2m-2 0V2m0 2v2M3 20h18V8H3v12zm4-8h10m-10 4h4" />
@@ -1396,7 +1396,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
           {/* Selection counter */}
           <div className="flex items-center justify-between mb-3">
             <span className="text-slate-400 text-sm">
-              Selected: <span className={`font-bold ${gifNfts.size >= 2 ? 'text-cyan-400' : 'text-red-400'}`}>{gifNfts.size}/10</span>
+              Selected: <span className={`font-bold ${gifNfts.size >= 2 ? 'text-[#8C52FF]' : 'text-red-400'}`}>{gifNfts.size}/10</span>
               {gifNfts.size < 2 && <span className="text-red-400 text-xs ml-2">(min 2)</span>}
             </span>
             {gifNfts.size > 0 && (
@@ -1419,8 +1419,8 @@ const [templateError, setTemplateError] = useState<string | null>(null);
                   key={i} 
                   onClick={() => toggleGifNft(i)}
                   disabled={gifNfts.size >= 10 && !isSelected}
-                  className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                    isSelected ? 'border-cyan-500 ring-2 ring-cyan-500/50' : 'border-slate-700 hover:border-cyan-500/50'
+                    className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                    isSelected ? 'border-[#8C52FF] ring-2 ring-[#8C52FF]/50' : 'border-slate-700 hover:border-[#8C52FF]/50'
                   } ${gifNfts.size >= 10 && !isSelected ? 'opacity-30' : ''}`}
                 >
                   <img src={nft.image} alt={nft.name} className="w-full h-full object-cover" />
@@ -1460,7 +1460,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-slate-400 text-sm">Speed</span>
-                <span className="text-cyan-400 text-sm">{gifSpeed}ms</span>
+                <span className="text-[#8C52FF] text-sm">{gifSpeed}ms</span>
               </div>
               <input
                 type="range"
@@ -1469,7 +1469,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
                 step="100"
                 value={gifSpeed}
                 onChange={(e) => setGifSpeed(Number(e.target.value))}
-                className="w-full accent-cyan-500"
+                className="w-full accent-[#8C52FF]"
               />
               <div className="flex justify-between text-xs text-slate-500 mt-1">
                 <span>Fast</span>
@@ -1479,7 +1479,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
           )}
 
           {/* Generate GIF button */}
-          {gifNfts.size >= 2 && !generatedGif && (
+              {gifNfts.size >= 2 && !generatedGif && (
             <button 
               onClick={generateRealGif}
               disabled={generatingGif}
@@ -1548,7 +1548,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
               disabled={!generatedGif}
               className={`w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
                 generatedGif
-                  ? 'bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white shadow-lg shadow-cyan-500/25'
+                  ? 'bg-gradient-to-r from-[#8C52FF] to-[#E53935] hover:from-[#7b47e5] hover:to-[#c7312f] text-white shadow-lg shadow-[#8C52FF]/30'
                   : 'bg-slate-700/50 text-white/50 cursor-not-allowed'
               }`}
               title={generatedGif ? "Share GIF" : "Generate GIF first"}
@@ -1567,7 +1567,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
         </div>
 
         {/* Top 3 Curator (moved lower, above slideshow) */}
-        <div className="bg-gradient-to-br from-yellow-900/20 to-slate-900 p-4 rounded-xl border border-yellow-500/30">
+        <div className="bg-gradient-to-br from-[#24110f] via-[#150f15] to-[#0c0a14] p-4 rounded-xl border border-[#E53935]/50">
           <div className="flex items-center gap-2 mb-2">
             <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
               <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
@@ -1579,7 +1579,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
           {/* Selection counter and Cast button */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <span className="text-slate-400 text-sm">Selected: <span className={`font-bold ${selectedNfts.size === 3 ? 'text-green-400' : 'text-yellow-400'}`}>{selectedNfts.size}/3</span></span>
+              <span className="text-slate-400 text-sm">Selected: <span className={`font-bold ${selectedNfts.size === 3 ? 'text-[#8C52FF]' : 'text-[#E53935]'}`}>{selectedNfts.size}/3</span></span>
               {selectedNfts.size > 0 && (
                 <button 
                   onClick={() => setSelectedNfts(new Set())}
@@ -1590,7 +1590,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
               )}
             </div>
             {selectedNfts.size === 3 && (
-              <button onClick={castTriptych} className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black rounded-lg text-sm font-bold flex items-center gap-2">
+              <button onClick={castTriptych} className="px-4 py-2 bg-[#E53935] hover:bg-[#c7312f] text-white rounded-lg text-sm font-bold flex items-center gap-2">
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
                 Cast Top 3
               </button>
@@ -1610,7 +1610,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
                   onClick={() => toggleSelectNft(key)}
                   disabled={selectedNfts.size >= 3 && !isSelected}
                   className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                    isSelected ? 'border-yellow-500 ring-2 ring-yellow-500/50' : 'border-slate-700 hover:border-yellow-500/50'
+                    isSelected ? 'border-[#E53935] ring-2 ring-[#E53935]/40' : 'border-slate-700 hover:border-[#E53935]/40'
                   } ${selectedNfts.size >= 3 && !isSelected ? 'opacity-30' : ''}`}
                 >
                   <img src={nft.image} alt={nft.name} className="w-full h-full object-cover" />
@@ -1626,7 +1626,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
         </div>
 
         {/* Digital Frame (moved lower to feature creation tools first) */}
-        <div className="bg-gradient-to-br from-purple-900/20 to-slate-900 p-4 rounded-xl border border-purple-500/30">
+        <div className="bg-gradient-to-br from-[#120f1f] to-[#0b0914] p-4 rounded-xl border border-[#8C52FF]/40">
           <div className="flex items-center gap-2 mb-2">
             <svg className="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -1648,7 +1648,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
             <button 
               onClick={startSlideshow}
               disabled={scanResults.nfts.filter((_, i) => !hiddenNfts.has(getNftKey(scanResults.nfts[i], i))).length === 0}
-              className="flex-1 py-2 bg-purple-500 hover:bg-purple-600 disabled:bg-purple-500/30 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+              className="flex-1 py-2 bg-[#8C52FF] hover:bg-[#7b47e5] disabled:bg-[#8C52FF]/30 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
             >
               <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
@@ -1669,7 +1669,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="text-center py-4 px-4">
-          <h1 className="text-2xl font-black tracking-tighter" style={{ color: '#0000f4' }}>
+          <h1 className="text-2xl font-black tracking-tighter" style={{ color: '#8C52FF' }}>
             Your Based NFTs
           </h1>
         </div>
@@ -1687,7 +1687,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
                 onClick={() => setActiveTab(tab.id as Tab)}
                 className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors ${
                   activeTab === tab.id
-                    ? 'bg-blue-500 text-white'
+                    ? 'bg-[#8C52FF] text-white'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -1730,7 +1730,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
         {scanResults && !loading && (
           <div className="px-4 pb-8">
             {/* Profile Card - Always visible */}
-            <div className="bg-gradient-to-br from-purple-900/30 to-slate-900 p-4 rounded-2xl border border-purple-500/30 mb-4">
+            <div className="bg-gradient-to-br from-[#120f1f] to-[#0b0914] p-4 rounded-2xl border border-[#8C52FF]/40 mb-4">
               <div className="flex items-center gap-4">
                 {scanResults.pfp && (
                   <img src={scanResults.pfp} alt={scanResults.displayName} className="w-14 h-14 rounded-full border-2 border-purple-500" />
