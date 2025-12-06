@@ -168,6 +168,48 @@ export default function Home() {
     });
   };
 
+  // Cast bag for sale
+  const castBag = async () => {
+    if (!scanResults || bagNfts.size === 0 || !bagPrice) return;
+    
+    // Get the selected NFT data
+    const selectedNfts = Array.from(bagNfts).map(key => {
+      const [contract, tokenId] = key.split('-');
+      const nft = scanResults.nfts.find(n => `${n.contract}-${n.tokenId}` === key);
+      return nft ? {
+        name: nft.name,
+        image: nft.image,
+        contract,
+        tokenId,
+      } : null;
+    }).filter(Boolean);
+
+    // Create bundle data for URL
+    const bundleData = {
+      seller: scanResults.username,
+      sellerFid: currentUserFid,
+      sellerPfp: scanResults.pfpUrl,
+      price: bagPrice,
+      nfts: selectedNfts,
+    };
+
+    const encodedData = encodeURIComponent(btoa(JSON.stringify(bundleData)));
+    const bundleUrl = `https://fiend-finder.vercel.app/bundle?data=${encodedData}`;
+
+    // Build cast text
+    const nftCount = selectedNfts.length;
+    const castText = `🛍️ NFT Bundle for Sale!\n\n${nftCount} NFT${nftCount > 1 ? 's' : ''} for ${bagPrice} ETH\n\nCheck it out 👇`;
+
+    try {
+      await sdk.actions.composeCast({
+        text: castText,
+        embeds: [bundleUrl],
+      });
+    } catch (err) {
+      console.error('Failed to cast bundle:', err);
+    }
+  };
+
   // Slideshow controls
   const startSlideshow = () => {
     if (!scanResults || scanResults.nfts.length === 0) return;
@@ -640,7 +682,15 @@ export default function Home() {
                   className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder:text-slate-500"
                 />
               </div>
-              <button className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium flex items-center justify-center gap-2">
+              <button 
+                onClick={castBag}
+                disabled={!bagPrice || parseFloat(bagPrice) <= 0}
+                className={`w-full py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+                  bagPrice && parseFloat(bagPrice) > 0
+                    ? 'bg-green-500 hover:bg-green-600 text-white'
+                    : 'bg-green-500/50 text-white/50 cursor-not-allowed'
+                }`}
+              >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
                 Cast Bundle for Sale
               </button>
