@@ -1132,7 +1132,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
     return (
       <div className="space-y-6">
         {/* Meme Generator */}
-            <div className="bg-[rgba(12,10,20,0.65)] p-4 rounded-xl border border-[#8C52FF]/40 shadow-[0_14px_40px_rgba(0,0,0,0.35)] backdrop-blur">
+            <div className="bg-[rgba(12,10,20,0.7)] p-4 rounded-xl border border-[#8C52FF]/60 shadow-[0_16px_50px_rgba(0,0,0,0.45)] backdrop-blur">
           <div className="flex items-center gap-2 mb-2">
             <svg className="h-5 w-5 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1383,12 +1383,12 @@ const [templateError, setTemplateError] = useState<string | null>(null);
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
             </svg>
-            Share Meme
+            Cast, Mint or List for Sale
           </button>
         </div>
 
         {/* GIF Creator */}
-        <div className="bg-[rgba(12,10,20,0.65)] p-4 rounded-xl border border-[#E53935]/40 shadow-[0_14px_40px_rgba(0,0,0,0.35)] backdrop-blur">
+        <div className="bg-[rgba(12,10,20,0.7)] p-4 rounded-xl border border-[#8C52FF]/60 shadow-[0_16px_50px_rgba(0,0,0,0.45)] backdrop-blur-lg">
           <div className="flex items-center gap-2 mb-2">
             <svg className="h-5 w-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2m0 2v2m0-2h2m8 0h2m-2 0V2m0 2v2M3 20h18V8H3v12zm4-8h10m-10 4h4" />
@@ -1556,12 +1556,12 @@ const [templateError, setTemplateError] = useState<string | null>(null);
                   ? 'bg-gradient-to-r from-[#8C52FF] to-[#E53935] hover:from-[#7b47e5] hover:to-[#c7312f] text-white shadow-lg shadow-[#8C52FF]/30'
                   : 'bg-slate-700/50 text-white/50 cursor-not-allowed'
               }`}
-              title={generatedGif ? "Share GIF" : "Generate GIF first"}
+              title={generatedGif ? "Cast, Mint or List" : "Generate GIF first"}
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
               </svg>
-              Share GIF
+              Cast, Mint or List for Sale
             </button>
           </div>
           {!generatedGif && gifNfts.size >= 2 && (
@@ -1679,16 +1679,11 @@ const [templateError, setTemplateError] = useState<string | null>(null);
       'linear-gradient(135deg, rgba(12,10,20,0.9) 0%, rgba(12,10,20,0.8) 40%, rgba(12,10,20,0.75) 100%)',
     // Use your dropped asset as the hero background
     heroImage:
-      "url('/fiends/ETHFIENDS-banner.png')",
-  };
-
-  const tabBackgrounds: Record<Tab, string> = {
-    gallery: "linear-gradient(180deg, rgba(8,6,14,0.9), rgba(8,6,14,0.85)), url('/fiends/NFT.jpg')",
-    trade: "linear-gradient(180deg, rgba(8,6,14,0.9), rgba(8,6,14,0.85)), url('/fiends/warplet-jacket.png')",
-    fun: "linear-gradient(180deg, rgba(8,6,14,0.9), rgba(8,6,14,0.85)), url('/fiends/ETHFIENDS-banner.png')",
+      "url('/fiends/ETHFIENDS-banner-vertical.png')",
   };
 
   return (
+    <>
     <main
       className="bg-slate-950 min-h-screen text-white font-sans"
       style={{
@@ -1698,41 +1693,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
         backgroundRepeat: 'no-repeat',
       }}
     >
-      <div className="max-w-md mx-auto">
-        {/* Header */}
-        <div className="text-center py-6 px-4">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
-            <span className="text-xs font-semibold tracking-wide text-white/80">EtherFiends Mini App</span>
-          </div>
-          <h1 className="text-3xl font-black tracking-tighter mt-3" style={{ color: design.primary, textShadow: '0 10px 40px rgba(0,0,0,0.35)' }}>
-            Your Based NFTs
-          </h1>
-          <p className="text-slate-300 text-sm mt-2">Gallery • Trade • Fun • Memes</p>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="px-4 mb-4">
-          <div className="flex bg-black/40 rounded-xl p-1 border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur">
-            {[
-              { id: 'gallery', label: 'Gallery', icon: '🖼️' },
-              { id: 'trade', label: 'Trade', icon: '💰' },
-              { id: 'fun', label: 'Fun', icon: '🎨' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as Tab)}
-                className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors ${
-                  activeTab === tab.id
-                    ? 'bg-[#8C52FF] text-white shadow-[0_10px_30px_rgba(140,82,255,0.35)]'
-                    : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                <span className="mr-1">{tab.icon}</span>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
+      <div className="max-w-md mx-auto pb-28">
 
         {/* Error */}
         {error && (
@@ -1744,16 +1705,16 @@ const [templateError, setTemplateError] = useState<string | null>(null);
         {/* Loading */}
         {loading && (
           <div
-            className="flex flex-col items-center justify-center py-16 px-4 text-center rounded-2xl border border-white/10 shadow-[0_16px_50px_rgba(0,0,0,0.35)]"
+            className="flex flex-col items-center justify-center py-16 px-4 text-center rounded-2xl border border-[#8C52FF]/60 shadow-[0_18px_60px_rgba(0,0,0,0.5)]"
             style={{
-              backgroundImage: "linear-gradient(180deg, rgba(8,6,14,0.9), rgba(8,6,14,0.9)), url('/fiends/ETHFIENDS-banner.png')",
+              backgroundImage: "linear-gradient(180deg, rgba(8,6,14,0.9), rgba(8,6,14,0.9)), url('/fiends/ETHFIENDS-banner-vertical.png')",
               backgroundSize: 'cover',
               backgroundPosition: 'center',
             }}
           >
-            <span className="animate-spin h-10 w-10 border-4 border-[#8C52FF] border-t-transparent rounded-full mb-4"></span>
-            <p className="text-white font-semibold text-lg">Loading your Fiends...</p>
-            <p className="text-slate-300 text-sm mt-1">Pulling NFTs and floor prices</p>
+            <span className="animate-spin h-10 w-10 border-4 border-[#8C52FF] border-t-transparent rounded-full mb-4 shadow-[0_10px_30px_rgba(140,82,255,0.35)]"></span>
+            <p className="text-white font-semibold text-lg drop-shadow-lg">Loading your Fiends...</p>
+            <p className="text-slate-200 text-sm mt-1 drop-shadow">Pulling NFTs and floor prices</p>
           </div>
         )}
 
@@ -1772,17 +1733,9 @@ const [templateError, setTemplateError] = useState<string | null>(null);
 
         {/* Main Content */}
         {scanResults && !loading && (
-        <div
-          className="px-4 pb-8"
-          style={{
-            backgroundImage: tabBackgrounds[activeTab],
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-          }}
-        >
+        <div className="px-4 pb-8 space-y-4">
             {/* Profile Card - Always visible */}
-            <div className="bg-[rgba(12,10,20,0.72)] p-4 rounded-2xl border border-[#8C52FF]/40 mb-4 shadow-[0_16px_50px_rgba(0,0,0,0.35)] backdrop-blur">
+            <div className="bg-[rgba(12,10,20,0.75)] p-4 rounded-2xl border border-[#8C52FF]/60 mb-4 shadow-[0_18px_60px_rgba(0,0,0,0.5)] backdrop-blur-lg">
               <div className="flex items-center gap-4">
                 {scanResults.pfp && (
                   <img src={scanResults.pfp} alt={scanResults.displayName} className="w-14 h-14 rounded-full border-2 border-[#8C52FF]" />
@@ -2127,14 +2080,18 @@ const [templateError, setTemplateError] = useState<string | null>(null);
                   {mintStep === 'uploading' || mintStep === 'signing' ? (
                     <>
                       <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
-                      Uploading to IPFS...
+                      {mintAction === 'cast' && 'Preparing cast...'}
+                      {mintAction === 'mint' && 'Preparing mint...'}
+                      {mintAction === 'sell' && 'Preparing listing...'}
                     </>
                   ) : (
                     <>
                       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                       </svg>
-                      Upload to IPFS
+                      {mintAction === 'cast' && 'Cast to Farcaster'}
+                      {mintAction === 'mint' && 'Mint NFT'}
+                      {mintAction === 'sell' && 'Offer for Sale'}
                     </>
                   )}
                 </button>
@@ -2227,5 +2184,30 @@ const [templateError, setTemplateError] = useState<string | null>(null);
         })()
       )}
     </main>
+    <div className="fixed bottom-0 left-0 right-0 z-50">
+      <div className="mx-auto max-w-md px-4 pb-3">
+        <div className="flex bg-black/70 border border-[#8C52FF]/50 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-lg overflow-hidden">
+          {[
+            { id: 'gallery', icon: '🖼️', label: 'Gallery' },
+            { id: 'trade', icon: '🪙', label: 'Trade' },
+            { id: 'fun', icon: '🎨', label: 'Fun' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as Tab)}
+              className={`flex-1 py-3 flex items-center justify-center transition-all ${
+                activeTab === tab.id
+                  ? 'bg-[#8C52FF] text-white shadow-[0_10px_30px_rgba(140,82,255,0.45)]'
+                  : 'text-slate-200 hover:text-white'
+              }`}
+            >
+              <span className="text-xl drop-shadow-lg">{tab.icon}</span>
+              <span className="sr-only">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+    </>
   );
 }
