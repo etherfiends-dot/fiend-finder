@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import sdk from '@farcaster/frame-sdk';
+import sdk from '@farcaster/miniapp-sdk';
 import { Avatar, Identity, Name, Address, Badge } from '@coinbase/onchainkit/identity';
 import { TokenImage } from '@coinbase/onchainkit/token';
 import { base } from 'viem/chains';
