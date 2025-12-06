@@ -1,0 +1,32 @@
+# Farcaster Frames v2 (Mini Apps) Rules
+
+
+
+1. **Architecture**: We are building a Farcaster Frame v2 (Mini App), NOT a v1 Frame.
+
+   - DO NOT use `<meta property="fc:frame">` tags.
+
+   - DO NOT rely on server-side image generation for UI.
+
+   - The app is a standard Single Page Application (SPA) run inside a webview.
+
+
+
+2. **Tech Stack**:
+
+   - Frontend: Next.js (App Router), TailwindCSS, Shadcn/ui.
+
+   - SDK: Use `@farcaster/frame-sdk` for context and actions.
+
+   - Wallet: Use `wagmi` and `@tanstack/react-query`.
+
+
+
+3. **Key Requirements**:
+
+   - The app must have a manifest at `/.well-known/farcaster.json`.
+
+   - Use `sdk.actions.ready()` once the page loads to signal readiness.
+
+   - Handle `sdk.context` to get the user's FID and wallet address.
+

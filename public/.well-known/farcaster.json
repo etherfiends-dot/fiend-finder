@@ -1,0 +1,18 @@
+{
+  "accountAssociation": {
+    "header": "",
+    "payload": "",
+    "signature": ""
+  },
+  "frame": {
+    "version": "1",
+    "name": "Your Based NFTs",
+    "iconUrl": "https://fiend-finder.vercel.app/icon.png",
+    "homeUrl": "https://fiend-finder.vercel.app",
+    "imageUrl": "https://fiend-finder.vercel.app/og-image.png",
+    "buttonTitle": "View My NFTs",
+    "splashImageUrl": "https://fiend-finder.vercel.app/splash.png",
+    "splashBackgroundColor": "#0000f4",
+    "webhookUrl": "https://fiend-finder.vercel.app/api/webhook"
+  }
+}
