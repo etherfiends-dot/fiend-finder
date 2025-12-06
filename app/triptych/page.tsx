@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import sdk from '@farcaster/frame-sdk';
 
@@ -16,7 +16,7 @@ type TriptychData = {
   }[];
 };
 
-export default function TriptychPage() {
+function TriptychContent() {
   const searchParams = useSearchParams();
   const [data, setData] = useState<TriptychData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -153,6 +153,24 @@ export default function TriptychPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+// Loading fallback component
+function TriptychLoading() {
+  return (
+    <div className="bg-slate-950 min-h-screen text-white flex items-center justify-center">
+      <span className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></span>
+    </div>
+  );
+}
+
+// Main page export with Suspense boundary
+export default function TriptychPage() {
+  return (
+    <Suspense fallback={<TriptychLoading />}>
+      <TriptychContent />
+    </Suspense>
   );
 }
 
