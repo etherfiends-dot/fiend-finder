@@ -27,7 +27,8 @@ export async function GET(req: NextRequest) {
     }
 
     const triptychData = JSON.parse(atob(decodeURIComponent(data)));
-    const { username, displayName, pfp, nfts } = triptychData;
+    const { user, displayName, pfp, nfts } = triptychData;
+    const username = user; // Cast sends 'user' field
 
     return new ImageResponse(
       (
