@@ -49,9 +49,15 @@ export default function Home() {
   const [hiddenNfts, setHiddenNfts] = useState<Set<string>>(new Set());
   const [showHidden, setShowHidden] = useState(false);
   const hasLoadedHidden = useRef(false);
+  
+  // Top 3 Curator state
+  const [selectedNfts, setSelectedNfts] = useState<Set<string>>(new Set());
+  const [curatorMode, setCuratorMode] = useState(false);
+  const hasLoadedTop3 = useRef(false);
 
-  // LocalStorage key for hidden NFTs
+  // LocalStorage keys
   const getStorageKey = (fid: number) => `hidden-nfts-${fid}`;
+  const getTop3StorageKey = (fid: number) => `top3-nfts-${fid}`;
 
   // Load hidden NFTs from localStorage when FID is available
   useEffect(() => {
@@ -81,8 +87,89 @@ export default function Home() {
     }
   }, [hiddenNfts, currentUserFid]);
 
+  // Load Top 3 selections from localStorage
+  useEffect(() => {
+    if (currentUserFid && !hasLoadedTop3.current) {
+      hasLoadedTop3.current = true;
+      try {
+        const stored = localStorage.getItem(getTop3StorageKey(currentUserFid));
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setSelectedNfts(new Set(parsed));
+        }
+      } catch (e) {
+        console.error('Failed to load Top 3 NFTs from storage:', e);
+      }
+    }
+  }, [currentUserFid]);
+
+  // Save Top 3 selections to localStorage
+  useEffect(() => {
+    if (currentUserFid && hasLoadedTop3.current) {
+      try {
+        const toStore = Array.from(selectedNfts);
+        localStorage.setItem(getTop3StorageKey(currentUserFid), JSON.stringify(toStore));
+      } catch (e) {
+        console.error('Failed to save Top 3 NFTs to storage:', e);
+      }
+    }
+  }, [selectedNfts, currentUserFid]);
+
   // Generate unique key for NFT
   const getNftKey = (nft: NFT, index: number) => `${nft.tokenId}-${nft.collectionName}-${index}`;
+  
+  // Toggle Top 3 selection
+  const toggleSelectNft = (key: string) => {
+    setSelectedNfts(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else if (next.size < 3) {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  // Share triptych
+  const shareTriptych = async () => {
+    if (selectedNfts.size !== 3 || !currentUserFid) return;
+    
+    // Get the selected NFT data
+    const selectedData = scanResults?.nfts
+      .map((nft, i) => ({ nft, key: getNftKey(nft, i) }))
+      .filter(({ key }) => selectedNfts.has(key))
+      .map(({ nft }) => ({
+        image: nft.image,
+        name: nft.name,
+        collection: nft.collectionName,
+      }));
+    
+    if (!selectedData || selectedData.length !== 3) return;
+    
+    // Encode the data for URL
+    const encoded = btoa(JSON.stringify({
+      fid: currentUserFid,
+      user: scanResults?.user,
+      displayName: scanResults?.displayName,
+      pfp: scanResults?.pfp,
+      nfts: selectedData,
+    }));
+    
+    const shareUrl = `${window.location.origin}/triptych?data=${encoded}`;
+    
+    // Try to share via Farcaster SDK or copy to clipboard
+    try {
+      if (sdk.actions.openUrl) {
+        // Open composer with the share URL
+        await sdk.actions.openUrl(shareUrl);
+      }
+    } catch {
+      // Fallback: copy to clipboard
+      await navigator.clipboard.writeText(shareUrl);
+      alert('Triptych link copied to clipboard!');
+    }
+  };
 
   // Toggle hide/show for an NFT
   const toggleHideNft = (key: string) => {
@@ -258,6 +345,79 @@ export default function Home() {
               )}
             </div>
 
+            {/* Top 3 Curator Section */}
+            <div className="bg-gradient-to-br from-blue-900/30 to-slate-900 p-4 rounded-2xl border border-blue-500/30">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="font-bold text-white flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    Top 3 Curator
+                  </h3>
+                  <p className="text-slate-400 text-xs">Select 3 favorites to create a shareable triptych</p>
+                </div>
+                <button
+                  onClick={() => setCuratorMode(!curatorMode)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    curatorMode 
+                      ? 'bg-yellow-500 text-black' 
+                      : 'bg-slate-700 text-white hover:bg-slate-600'
+                  }`}
+                >
+                  {curatorMode ? 'Done' : 'Select'}
+                </button>
+              </div>
+              
+              {curatorMode && (
+                <div className="flex items-center justify-between pt-3 border-t border-slate-700/50">
+                  <span className="text-slate-400 text-sm">
+                    Selected: <span className="text-white font-bold">{selectedNfts.size}/3</span>
+                  </span>
+                  {selectedNfts.size === 3 && (
+                    <button
+                      onClick={shareTriptych}
+                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                      </svg>
+                      Share Triptych
+                    </button>
+                  )}
+                  {selectedNfts.size > 0 && selectedNfts.size < 3 && (
+                    <span className="text-slate-500 text-sm">Select {3 - selectedNfts.size} more</span>
+                  )}
+                </div>
+              )}
+              
+              {/* Mini preview of selected NFTs */}
+              {selectedNfts.size > 0 && !curatorMode && (
+                <div className="flex gap-2 pt-3 border-t border-slate-700/50">
+                  {scanResults.nfts
+                    .map((nft, i) => ({ nft, key: getNftKey(nft, i) }))
+                    .filter(({ key }) => selectedNfts.has(key))
+                    .map(({ nft, key }) => (
+                      <div key={key} className="w-12 h-12 rounded-lg overflow-hidden border border-yellow-500/50">
+                        <img src={nft.image} alt={nft.name} className="w-full h-full object-cover" />
+                      </div>
+                    ))
+                  }
+                  {selectedNfts.size === 3 && (
+                    <button
+                      onClick={shareTriptych}
+                      className="flex-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 rounded-lg flex items-center justify-center gap-1 text-blue-400 text-xs font-medium transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                      </svg>
+                      Share
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* NFT Gallery */}
             {(() => {
               const visibleNfts = scanResults.nfts.filter((nft, i) => !hiddenNfts.has(getNftKey(nft, i)));
@@ -280,16 +440,39 @@ export default function Home() {
                               alt={nft.name} 
                               className="w-full h-full object-cover"
                             />
+                            {/* Star Button (Curator Mode) */}
+                            {curatorMode && (
+                              <button
+                                onClick={() => toggleSelectNft(key)}
+                                className={`absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                                  selectedNfts.has(key)
+                                    ? 'bg-yellow-500 opacity-100'
+                                    : 'bg-black/60 hover:bg-yellow-500/80 opacity-100'
+                                } ${selectedNfts.size >= 3 && !selectedNfts.has(key) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                title={selectedNfts.has(key) ? 'Remove from Top 3' : 'Add to Top 3'}
+                                disabled={selectedNfts.size >= 3 && !selectedNfts.has(key)}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${selectedNfts.has(key) ? 'text-black' : 'text-white'}`} viewBox="0 0 20 20" fill="currentColor">
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                              </button>
+                            )}
                             {/* Hide Button */}
-                            <button
-                              onClick={() => toggleHideNft(key)}
-                              className="absolute top-2 right-2 w-7 h-7 bg-black/60 hover:bg-red-500/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
-                              title="Hide NFT"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                              </svg>
-                            </button>
+                            {!curatorMode && (
+                              <button
+                                onClick={() => toggleHideNft(key)}
+                                className="absolute top-2 right-2 w-7 h-7 bg-black/60 hover:bg-red-500/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                                title="Hide NFT"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                </svg>
+                              </button>
+                            )}
+                            {/* Selected indicator border */}
+                            {selectedNfts.has(key) && (
+                              <div className="absolute inset-0 border-4 border-yellow-500 rounded-xl pointer-events-none" />
+                            )}
                             {/* Floor Price Badge */}
                             {nft.floorPrice > 0 && (
                               <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm px-2 py-1 rounded-lg">
