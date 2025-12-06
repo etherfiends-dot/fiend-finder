@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import sdk from '@farcaster/miniapp-sdk';
+import sdk from '@farcaster/frame-sdk';
 
 type MemeData = {
   image: string;

@@ -30,6 +30,18 @@
 
    - Handle `sdk.context` to get the user's FID and wallet address.
 
+4. **Mini App Embed & Manifest (per miniapps.farcaster.xyz)**:
+
+   - Use Mini App metadata, not Frames v1 tags: prefer `fc:miniapp` (JSON string) in page head when adding embed meta; do NOT add `fc:frame` meta.
+
+   - Manifest must include `accountAssociation` and `frame` objects; `frame.version` should be `"1"` with required fields (`name`, `iconUrl`, `homeUrl`, optionally `imageUrl`, `buttonTitle`, `splashImageUrl`, `splashBackgroundColor`).
+
+   - The signed domain in `accountAssociation.payload` must match the hosting domain exactly (including subdomain).
+
+   - Keep manifest accessible at `https://{domain}/.well-known/farcaster.json` (HTTP 200, valid JSON).
+
+   - Do not invent manifest fields outside the official schema.
+
 ## Testing Environment Guidelines
 1. **Localhost is Invalid:** Always assume the user cannot test Frames on `http://localhost:3000`. 
 2. **Tunneling is Required:** If the user asks to "test" or "preview," remind them to ensure their ngrok/tunnel is active and pointing to the correct port.

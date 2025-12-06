@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import sdk from '@farcaster/miniapp-sdk';
+import sdk from '@farcaster/frame-sdk';
 
 type GifData = {
   images: string[];
