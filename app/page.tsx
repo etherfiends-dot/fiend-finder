@@ -89,6 +89,11 @@ export default function Home() {
   const [memeNftIndex, setMemeNftIndex] = useState<number | null>(null);
   const [memeTopText, setMemeTopText] = useState('');
   const [memeBottomText, setMemeBottomText] = useState('');
+  const [memeTLText, setMemeTLText] = useState('');
+  const [memeTRText, setMemeTRText] = useState('');
+  const [memeBLText, setMemeBLText] = useState('');
+  const [memeBRText, setMemeBRText] = useState('');
+  const [memeTextMode, setMemeTextMode] = useState<'two-line' | 'quad'>('two-line');
 const [memeSource, setMemeSource] = useState<'nft' | 'template'>('nft');
 const [memeTemplates, setMemeTemplates] = useState<{ url: string; name: string; width: number; height: number }[]>([]);
 const [memeTemplateIndex, setMemeTemplateIndex] = useState<number | null>(null);
@@ -612,7 +617,10 @@ const [templateError, setTemplateError] = useState<string | null>(null);
     const hasSelection = memeSource === 'nft'
       ? memeNftIndex !== null
       : memeTemplateIndex !== null;
-    if (!hasSelection || !scanResults) return;
+    const hasText = memeTextMode === 'two-line'
+      ? (memeTopText || memeBottomText)
+      : (memeTLText || memeTRText || memeBLText || memeBRText);
+    if (!hasSelection || !hasText || !scanResults) return;
     setMintMode('meme');
     setMintAction('cast'); // Default to cast/share
     setMintStep('idle');
@@ -670,10 +678,24 @@ const [templateError, setTemplateError] = useState<string | null>(null);
         }
 
         // Generate the meme image with text overlay
-        const memeDataUrl = await generateMemeImage(sourceImage, memeTopText, memeBottomText);
+        const memeDataUrl = await generateMemeImage(
+          sourceImage,
+          memeTopText,
+          memeBottomText,
+          {
+            mode: memeTextMode,
+            topLeft: memeTLText,
+            topRight: memeTRText,
+            bottomLeft: memeBLText,
+            bottomRight: memeBRText,
+          }
+        );
         imageBlob = base64ToBlob(memeDataUrl, 'image/png');
         filename = `meme-${Date.now()}.png`;
-        tokenName = memeTopText || memeBottomText || sourceName || 'Meme';
+        tokenName = (memeTextMode === 'quad'
+          ? (memeTLText || memeTRText || memeBLText || memeBRText)
+          : (memeTopText || memeBottomText)
+        ) || sourceName || 'Meme';
         metadata = {
           name: tokenName,
           description: `A meme created with My Based NFTs by @${scanResults.user}`,
@@ -684,6 +706,10 @@ const [templateError, setTemplateError] = useState<string | null>(null);
             { trait_type: 'Source', value: memeSource === 'nft' ? 'NFT' : 'Template' },
             ...(memeTopText ? [{ trait_type: 'Top Text', value: memeTopText }] : []),
             ...(memeBottomText ? [{ trait_type: 'Bottom Text', value: memeBottomText }] : []),
+            ...(memeTLText ? [{ trait_type: 'Top Left', value: memeTLText }] : []),
+            ...(memeTRText ? [{ trait_type: 'Top Right', value: memeTRText }] : []),
+            ...(memeBLText ? [{ trait_type: 'Bottom Left', value: memeBLText }] : []),
+            ...(memeBRText ? [{ trait_type: 'Bottom Right', value: memeBRText }] : []),
           ],
         };
       } else if (mintMode === 'gif' && generatedGif) {
@@ -1247,53 +1273,164 @@ const [templateError, setTemplateError] = useState<string | null>(null);
           {selectedMemeImage && (
             <div className="relative aspect-square bg-black rounded-lg mb-4 overflow-hidden">
               <img src={selectedMemeImage} alt={selectedMemeName || 'Meme'} className="w-full h-full object-contain" />
-              {/* Top text overlay */}
-              {memeTopText && (
-                <div className="absolute top-2 left-0 right-0 text-center">
-                  <span className="text-white text-2xl font-black uppercase px-2" style={{ 
-                    textShadow: '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 2px 0 #000, 0 -2px 0 #000, 2px 0 0 #000, -2px 0 0 #000'
-                  }}>
-                    {memeTopText}
-                  </span>
-                </div>
+              
+              {memeTextMode === 'two-line' && (
+                <>
+                  {memeTopText && (
+                    <div className="absolute top-2 left-0 right-0 text-center px-2">
+                      <span className="text-white text-2xl font-black uppercase break-words leading-tight" style={{ 
+                        textShadow: '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 2px 0 #000, 0 -2px 0 #000, 2px 0 0 #000, -2px 0 0 #000'
+                      }}>
+                        {memeTopText}
+                      </span>
+                    </div>
+                  )}
+                  {memeBottomText && (
+                    <div className="absolute bottom-2 left-0 right-0 text-center px-2">
+                      <span className="text-white text-2xl font-black uppercase break-words leading-tight" style={{ 
+                        textShadow: '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 2px 0 #000, 0 -2px 0 #000, 2px 0 0 #000, -2px 0 0 #000'
+                      }}>
+                        {memeBottomText}
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
-              {/* Bottom text overlay */}
-              {memeBottomText && (
-                <div className="absolute bottom-2 left-0 right-0 text-center">
-                  <span className="text-white text-2xl font-black uppercase px-2" style={{ 
-                    textShadow: '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 2px 0 #000, 0 -2px 0 #000, 2px 0 0 #000, -2px 0 0 #000'
-                  }}>
-                    {memeBottomText}
-                  </span>
-                </div>
+
+              {memeTextMode === 'quad' && (
+                <>
+                  {memeTLText && (
+                    <div className="absolute top-2 left-2 right-1/2 text-left px-2">
+                      <span className="text-white text-xl font-black uppercase break-words leading-tight" style={{ 
+                        textShadow: '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 2px 0 #000, 0 -2px 0 #000, 2px 0 0 #000, -2px 0 0 #000'
+                      }}>
+                        {memeTLText}
+                      </span>
+                    </div>
+                  )}
+                  {memeTRText && (
+                    <div className="absolute top-2 right-2 left-1/2 text-right px-2">
+                      <span className="text-white text-xl font-black uppercase break-words leading-tight" style={{ 
+                        textShadow: '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 2px 0 #000, 0 -2px 0 #000, 2px 0 0 #000, -2px 0 0 #000'
+                      }}>
+                        {memeTRText}
+                      </span>
+                    </div>
+                  )}
+                  {memeBLText && (
+                    <div className="absolute bottom-2 left-2 right-1/2 text-left px-2">
+                      <span className="text-white text-xl font-black uppercase break-words leading-tight" style={{ 
+                        textShadow: '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 2px 0 #000, 0 -2px 0 #000, 2px 0 0 #000, -2px 0 0 #000'
+                      }}>
+                        {memeBLText}
+                      </span>
+                    </div>
+                  )}
+                  {memeBRText && (
+                    <div className="absolute bottom-2 right-2 left-1/2 text-right px-2">
+                      <span className="text-white text-xl font-black uppercase break-words leading-tight" style={{ 
+                        textShadow: '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 2px 0 #000, 0 -2px 0 #000, 2px 0 0 #000, -2px 0 0 #000'
+                      }}>
+                        {memeBRText}
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
 
-          <input
-            type="text"
-            placeholder="Top text..."
-            value={memeTopText}
-            onChange={(e) => setMemeTopText(e.target.value)}
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder:text-slate-500 mb-2 uppercase"
-          />
-          <input
-            type="text"
-            placeholder="Bottom text..."
-            value={memeBottomText}
-            onChange={(e) => setMemeBottomText(e.target.value)}
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder:text-slate-500 mb-4 uppercase"
-          />
+          {/* Text mode toggle */}
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={() => setMemeTextMode('two-line')}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                memeTextMode === 'two-line'
+                  ? 'bg-pink-500 text-white border-pink-500'
+                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:border-pink-500/50'
+              }`}
+            >
+              Top / Bottom
+            </button>
+            <button
+              onClick={() => setMemeTextMode('quad')}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                memeTextMode === 'quad'
+                  ? 'bg-pink-500 text-white border-pink-500'
+                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:border-pink-500/50'
+              }`}
+            >
+              4 Quadrants
+            </button>
+          </div>
+
+          {memeTextMode === 'two-line' && (
+            <>
+              <input
+                type="text"
+                placeholder="Top text..."
+                value={memeTopText}
+                onChange={(e) => setMemeTopText(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder:text-slate-500 mb-2 uppercase"
+              />
+              <input
+                type="text"
+                placeholder="Bottom text..."
+                value={memeBottomText}
+                onChange={(e) => setMemeBottomText(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder:text-slate-500 mb-4 uppercase"
+              />
+            </>
+          )}
+
+          {memeTextMode === 'quad' && (
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              <input
+                type="text"
+                placeholder="Top Left"
+                value={memeTLText}
+                onChange={(e) => setMemeTLText(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder:text-slate-500 uppercase"
+              />
+              <input
+                type="text"
+                placeholder="Top Right"
+                value={memeTRText}
+                onChange={(e) => setMemeTRText(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder:text-slate-500 uppercase"
+              />
+              <input
+                type="text"
+                placeholder="Bottom Left"
+                value={memeBLText}
+                onChange={(e) => setMemeBLText(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder:text-slate-500 uppercase"
+              />
+              <input
+                type="text"
+                placeholder="Bottom Right"
+                value={memeBRText}
+                onChange={(e) => setMemeBRText(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder:text-slate-500 uppercase"
+              />
+            </div>
+          )}
           
           <button 
             onClick={startMemeMint}
             disabled={
               (memeSource === 'nft' && memeNftIndex === null) ||
               (memeSource === 'template' && memeTemplateIndex === null) ||
-              (!memeTopText && !memeBottomText)
+              (memeTextMode === 'two-line'
+                ? (!memeTopText && !memeBottomText)
+                : (!memeTLText && !memeTRText && !memeBLText && !memeBRText))
             }
             className={`w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
-              ((memeSource === 'nft' && memeNftIndex !== null) || (memeSource === 'template' && memeTemplateIndex !== null)) && (memeTopText || memeBottomText)
+              ((memeSource === 'nft' && memeNftIndex !== null) || (memeSource === 'template' && memeTemplateIndex !== null)) && (
+                memeTextMode === 'two-line'
+                  ? (memeTopText || memeBottomText)
+                  : (memeTLText || memeTRText || memeBLText || memeBRText)
+              )
                 ? 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white shadow-lg shadow-pink-500/25'
                 : 'bg-slate-700/50 text-white/50 cursor-not-allowed'
             }`}

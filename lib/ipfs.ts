@@ -203,10 +203,21 @@ export function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string = "imag
  * Generate a meme image with text overlay
  * Returns a data URL that can be converted to a blob
  */
+type MemeTextMode = 'two-line' | 'quad';
+
+interface MemeTextOptions {
+  mode?: MemeTextMode;
+  topLeft?: string;
+  topRight?: string;
+  bottomLeft?: string;
+  bottomRight?: string;
+}
+
 export async function generateMemeImage(
   imageUrl: string,
   topText: string,
-  bottomText: string
+  bottomText: string,
+  options: MemeTextOptions = {}
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement("canvas");
@@ -228,25 +239,72 @@ export async function generateMemeImage(
       ctx.drawImage(img, 0, 0);
 
       // Configure text style (classic meme style)
-      const fontSize = Math.max(canvas.width / 10, 24);
+      const fontSize = Math.max(canvas.width / 14, 22);
       ctx.font = `bold ${fontSize}px Impact, sans-serif`;
       ctx.textAlign = "center";
       ctx.fillStyle = "white";
       ctx.strokeStyle = "black";
       ctx.lineWidth = fontSize / 15;
 
-      // Draw top text
-      if (topText) {
-        const topY = fontSize + 10;
-        ctx.strokeText(topText.toUpperCase(), canvas.width / 2, topY);
-        ctx.fillText(topText.toUpperCase(), canvas.width / 2, topY);
-      }
+      const lineHeight = fontSize * 1.1;
+      const margin = Math.max(canvas.width * 0.03, 16);
 
-      // Draw bottom text
-      if (bottomText) {
-        const bottomY = canvas.height - 20;
-        ctx.strokeText(bottomText.toUpperCase(), canvas.width / 2, bottomY);
-        ctx.fillText(bottomText.toUpperCase(), canvas.width / 2, bottomY);
+      const drawWrapped = (text: string, centerX: number, startY: number, maxWidth: number, align: CanvasTextAlign = "center") => {
+        const words = text.trim().split(/\s+/);
+        const lines: string[] = [];
+        let current = "";
+        ctx.textAlign = align;
+        words.forEach((word) => {
+          const test = current ? `${current} ${word}` : word;
+          const width = ctx.measureText(test.toUpperCase()).width;
+          if (width > maxWidth && current) {
+            lines.push(current);
+            current = word;
+          } else {
+            current = test;
+          }
+        });
+        if (current) lines.push(current);
+        lines.forEach((line, i) => {
+          const y = startY + i * lineHeight;
+          ctx.strokeText(line.toUpperCase(), centerX, y);
+          ctx.fillText(line.toUpperCase(), centerX, y);
+        });
+      };
+
+      const mode: MemeTextMode = options.mode || 'two-line';
+
+      if (mode === 'quad') {
+        const halfW = canvas.width / 2;
+        const halfH = canvas.height / 2;
+        const maxW = halfW - margin * 2;
+
+        if (options.topLeft) {
+          drawWrapped(options.topLeft, halfW * 0.5, margin + fontSize, maxW, "center");
+        }
+        if (options.topRight) {
+          drawWrapped(options.topRight, halfW * 1.5, margin + fontSize, maxW, "center");
+        }
+        if (options.bottomLeft) {
+          drawWrapped(options.bottomLeft, halfW * 0.5, halfH + fontSize, maxW, "center");
+        }
+        if (options.bottomRight) {
+          drawWrapped(options.bottomRight, halfW * 1.5, halfH + fontSize, maxW, "center");
+        }
+      } else {
+        // two-line classic meme
+        const maxW = canvas.width - margin * 2;
+        // Draw top text
+        if (topText) {
+          const topY = fontSize + margin;
+          drawWrapped(topText, canvas.width / 2, topY, maxW);
+        }
+
+        // Draw bottom text
+        if (bottomText) {
+          const bottomYStart = canvas.height - margin - fontSize;
+          drawWrapped(bottomText, canvas.width / 2, bottomYStart, maxW);
+        }
       }
 
       resolve(canvas.toDataURL("image/png"));
