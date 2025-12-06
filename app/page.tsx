@@ -367,7 +367,17 @@ export default function Home() {
           </div>
           <p className="text-slate-400 text-sm mb-3">Tap your 3 favorite NFTs below to select them</p>
           <div className="flex items-center justify-between">
-            <span className="text-slate-400 text-sm">Selected: <span className="text-yellow-400 font-bold">{selectedNfts.size}/3</span></span>
+            <div className="flex items-center gap-2">
+              <span className="text-slate-400 text-sm">Selected: <span className="text-yellow-400 font-bold">{selectedNfts.size}/3</span></span>
+              {selectedNfts.size > 0 && (
+                <button 
+                  onClick={() => setSelectedNfts(new Set())}
+                  className="text-slate-500 hover:text-red-400 text-xs underline"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
             {selectedNfts.size === 3 && (
               <button onClick={castTriptych} className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm font-medium flex items-center gap-2">
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
@@ -379,8 +389,10 @@ export default function Home() {
 
         {/* NFT Selection Grid */}
         <div className="grid grid-cols-2 gap-3">
-          {scanResults.nfts.filter((_, i) => !hiddenNfts.has(getNftKey(scanResults.nfts[i], i))).map((nft, i) => {
-            const key = getNftKey(nft, i);
+          {scanResults.nfts.map((nft, originalIndex) => {
+            const key = getNftKey(nft, originalIndex);
+            // Skip hidden NFTs
+            if (hiddenNfts.has(key)) return null;
             const isSelected = selectedNfts.has(key);
             return (
               <button
