@@ -172,17 +172,16 @@ export default function Home() {
   const castBag = async () => {
     if (!scanResults || bagNfts.size === 0 || !bagPrice) return;
     
-    // Get the selected NFT data
-    const selectedNfts = Array.from(bagNfts).map(key => {
-      const [contract, tokenId] = key.split('-');
-      const nft = scanResults.nfts.find(n => `${n.contract}-${n.tokenId}` === key);
-      return nft ? {
+    // Get the selected NFT data - keys are in format: tokenId-collectionName-index
+    const selectedNfts = scanResults.nfts
+      .map((nft, i) => ({ nft, key: getNftKey(nft, i) }))
+      .filter(({ key }) => bagNfts.has(key))
+      .map(({ nft }) => ({
         name: nft.name,
         image: nft.image,
-        contract,
-        tokenId,
-      } : null;
-    }).filter(Boolean);
+        contract: nft.contractAddress,
+        tokenId: nft.tokenId,
+      }));
 
     // Create bundle data for URL
     const bundleData = {
