@@ -31,7 +31,9 @@ export interface SeaportOrder {
  * Initialize Seaport with a provider
  */
 export function initSeaport(provider: ethers.BrowserProvider) {
-  return new Seaport(provider);
+  // Seaport SDK expects JsonRpcProvider, but BrowserProvider works at runtime
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return new Seaport(provider as any);
 }
 
 /**
