@@ -740,7 +740,7 @@ export default function Home() {
         if (context?.user?.fid) setCurrentUserFid(context.user.fid);
         sdk.actions.ready();
       } catch {}
-      setIsSDKLoaded(true);
+        setIsSDKLoaded(true);
     };
     if (sdk && !isSDKLoaded) load();
   }, [isSDKLoaded]);
@@ -771,7 +771,7 @@ export default function Home() {
     const visibleNfts = scanResults.nfts.filter((nft, i) => !hiddenNfts.has(getNftKey(nft, i)));
     const hiddenNftsList = scanResults.nfts.filter((nft, i) => hiddenNfts.has(getNftKey(nft, i)));
 
-    return (
+  return (
       <div className="space-y-4">
         {/* NFT Grid */}
         {visibleNfts.length > 0 ? (
@@ -1143,37 +1143,20 @@ export default function Home() {
             className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder:text-slate-500 mb-4 uppercase"
           />
           
-          <div className="flex gap-2">
-            <button 
-              onClick={castMeme}
-              disabled={memeNftIndex === null || (!memeTopText && !memeBottomText)}
-              className={`flex-1 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
-                memeNftIndex !== null && (memeTopText || memeBottomText)
-                  ? 'bg-pink-500 hover:bg-pink-600 text-white'
-                  : 'bg-pink-500/30 text-white/50 cursor-not-allowed'
-              }`}
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-              Cast
-            </button>
-            <button 
-              onClick={startMemeMint}
-              disabled={memeNftIndex === null || (!memeTopText && !memeBottomText)}
-              className={`flex-1 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
-                memeNftIndex !== null && (memeTopText || memeBottomText)
-                  ? 'bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white'
-                  : 'bg-slate-700/50 text-white/50 cursor-not-allowed'
-              }`}
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Sell NFT
-            </button>
-          </div>
-          <p className="text-slate-500 text-xs mt-2 text-center">
-            Sell your meme for any Base memecoin 🐸
-          </p>
+          <button 
+            onClick={startMemeMint}
+            disabled={memeNftIndex === null || (!memeTopText && !memeBottomText)}
+            className={`w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
+              memeNftIndex !== null && (memeTopText || memeBottomText)
+                ? 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white shadow-lg shadow-pink-500/25'
+                : 'bg-slate-700/50 text-white/50 cursor-not-allowed'
+            }`}
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+            </svg>
+            Share Meme
+          </button>
         </div>
 
         {/* GIF Creator */}
@@ -1337,41 +1320,24 @@ export default function Home() {
           {/* Action buttons */}
           <div className="flex gap-2">
             <button 
-              onClick={castGif}
-              disabled={gifNfts.size < 2}
-              className={`flex-1 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
-                gifNfts.size >= 2
-                  ? 'bg-purple-500 hover:bg-purple-600 text-white'
-                  : 'bg-purple-500/30 text-white/50 cursor-not-allowed'
-              }`}
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-              Cast
-            </button>
-            <button 
               onClick={startGifMint}
               disabled={!generatedGif}
-              className={`flex-1 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+              className={`w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
                 generatedGif
-                  ? 'bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white'
+                  ? 'bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white shadow-lg shadow-cyan-500/25'
                   : 'bg-slate-700/50 text-white/50 cursor-not-allowed'
               }`}
-              title={generatedGif ? "Sell GIF as NFT" : "Generate GIF first"}
+              title={generatedGif ? "Share GIF" : "Generate GIF first"}
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
               </svg>
-              Sell NFT
+              Share GIF
             </button>
           </div>
           {!generatedGif && gifNfts.size >= 2 && (
             <p className="text-slate-500 text-xs mt-2 text-center">
-              Generate GIF first, then sell as NFT for memecoins 🐸
-            </p>
-          )}
-          {generatedGif && (
-            <p className="text-slate-500 text-xs mt-2 text-center">
-              Sell your GIF for any Base memecoin!
+              Generate GIF first, then share or sell it
             </p>
           )}
         </div>
@@ -1517,7 +1483,7 @@ export default function Home() {
                         }}>
                           {memeTopText}
                         </span>
-                      </div>
+                    </div>
                     )}
                     {memeBottomText && (
                       <div className="absolute bottom-1 left-0 right-0 text-center">
@@ -1526,9 +1492,9 @@ export default function Home() {
                         }}>
                           {memeBottomText}
                         </span>
-                      </div>
-                    )}
                   </div>
+                    )}
+              </div>
                 )}
                 {mintMode === 'gif' && generatedGif && (
                   <img 
@@ -1731,7 +1697,7 @@ export default function Home() {
                     <>
                       <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                      </svg>
+                  </svg>
                       Cast to Farcaster
                     </>
                   ) : mintAction === 'mint' ? (
@@ -1751,10 +1717,10 @@ export default function Home() {
                   )}
                 </button>
               )}
-            </div>
+                </div>
           </div>
-        </div>
-      )}
+              </div>
+            )}
 
       {/* Fullscreen Slideshow Overlay */}
       {slideshowActive && scanResults && (
@@ -1824,8 +1790,8 @@ export default function Home() {
                   <p className="text-slate-400">{currentNft.collectionName}</p>
                   {currentNft.floorPrice > 0 && (
                     <p className="text-purple-400 text-sm mt-1">{currentNft.floorPrice.toFixed(4)} ETH</p>
-                  )}
-                </div>
+        )}
+      </div>
               );
             })()}
           </div>
