@@ -386,15 +386,12 @@ export default function Home() {
     if (gifNfts.size < 2 || !scanResults || !currentUserFid) return;
     
     const selectedIndices = Array.from(gifNfts).sort((a, b) => a - b);
-    const gifData = selectedIndices.map(i => ({
-      image: scanResults.nfts[i].image,
-      name: scanResults.nfts[i].name,
-    }));
+    const imageUrls = selectedIndices.map(i => scanResults.nfts[i].image);
     
     const encoded = btoa(JSON.stringify({
-      frames: gifData,
+      images: imageUrls,
       speed: gifSpeed,
-      user: scanResults.user,
+      username: scanResults.user,
       displayName: scanResults.displayName,
     }));
     
@@ -430,7 +427,7 @@ export default function Home() {
       name: nft.name,
       topText: memeTopText,
       bottomText: memeBottomText,
-      user: scanResults.user,
+      username: scanResults.user,
       displayName: scanResults.displayName,
     }));
     

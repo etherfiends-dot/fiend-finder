@@ -5,9 +5,9 @@ import { useSearchParams } from 'next/navigation';
 import sdk from '@farcaster/frame-sdk';
 
 type GifData = {
-  frames: { image: string; name: string }[];
+  images: string[];
   speed: number;
-  user: string;
+  username: string;
   displayName: string;
 };
 
@@ -36,7 +36,7 @@ function GifContent() {
 
     try {
       const decoded = JSON.parse(atob(encoded));
-      if (!decoded.frames || decoded.frames.length < 2) {
+      if (!decoded.images || decoded.images.length < 2) {
         setError('Invalid GIF data');
         return;
       }
@@ -48,9 +48,9 @@ function GifContent() {
 
   // Animation loop
   useEffect(() => {
-    if (data && data.frames.length >= 2) {
+    if (data && data.images.length >= 2) {
       intervalRef.current = setInterval(() => {
-        setCurrentFrame(prev => (prev + 1) % data.frames.length);
+        setCurrentFrame(prev => (prev + 1) % data.images.length);
       }, data.speed || 500);
     }
     return () => {
@@ -79,7 +79,7 @@ function GifContent() {
     );
   }
 
-  const currentNft = data.frames[currentFrame];
+  const currentImage = data.images[currentFrame];
 
   return (
     <main className="bg-slate-950 min-h-screen text-white p-4">
@@ -95,7 +95,7 @@ function GifContent() {
         <div className="text-center mb-4">
           <p className="text-slate-400 text-sm">
             Created by <span className="text-white font-medium">{data.displayName}</span>
-            <span className="text-purple-400"> @{data.user}</span>
+            <span className="text-purple-400"> @{data.username}</span>
           </p>
         </div>
 
@@ -103,14 +103,14 @@ function GifContent() {
         <div className="bg-black rounded-2xl overflow-hidden border border-cyan-500/30 shadow-lg shadow-cyan-500/10">
           <div className="relative aspect-square">
             <img 
-              src={currentNft.image} 
-              alt={currentNft.name} 
+              src={currentImage} 
+              alt={`Frame ${currentFrame + 1}`} 
               className="w-full h-full object-contain"
             />
             {/* Frame indicator */}
             <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1">
               <span className="text-cyan-400 text-sm font-mono">
-                {currentFrame + 1}/{data.frames.length}
+                {currentFrame + 1}/{data.images.length}
               </span>
             </div>
             {/* GIF badge */}
@@ -121,7 +121,7 @@ function GifContent() {
           
           {/* Frame dots */}
           <div className="bg-slate-900 p-3 flex justify-center gap-2">
-            {data.frames.map((_, i) => (
+            {data.images.map((_, i) => (
               <div 
                 key={i}
                 className={`w-2 h-2 rounded-full transition-all ${
@@ -132,10 +132,9 @@ function GifContent() {
           </div>
         </div>
 
-        {/* NFT name */}
+        {/* Info */}
         <div className="mt-4 text-center">
-          <p className="text-white font-medium">{currentNft.name}</p>
-          <p className="text-slate-500 text-sm">{data.frames.length} frames • {data.speed}ms</p>
+          <p className="text-slate-500 text-sm">{data.images.length} frames • {data.speed}ms</p>
         </div>
 
         {/* CTA */}
