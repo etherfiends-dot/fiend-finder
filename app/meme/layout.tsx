@@ -1,15 +1,20 @@
 import type { Metadata } from 'next';
 
+// Force dynamic rendering to access searchParams
+export const dynamic = 'force-dynamic';
+
 type Props = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ data?: string }>;
 };
 
-export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
-  const params = await searchParams;
-  const data = params.data || '';
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  const searchParams = await props.searchParams;
+  const data = searchParams?.data || '';
   
-  const ogImageUrl = `https://fiend-finder.vercel.app/api/og/meme?data=${data}`;
+  const ogImageUrl = data 
+    ? `https://fiend-finder.vercel.app/api/og/meme?data=${data}`
+    : 'https://fiend-finder.vercel.app/og-image.png';
   
   let title = 'NFT Meme';
   let description = 'Check out this NFT meme!';
