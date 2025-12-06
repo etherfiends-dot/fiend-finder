@@ -1131,37 +1131,6 @@ const [templateError, setTemplateError] = useState<string | null>(null);
     
     return (
       <div className="space-y-6">
-        {/* Fiends Feature Clip */}
-        <div className="bg-[rgba(12,10,20,0.65)] p-4 rounded-xl border border-[#8C52FF]/40 shadow-[0_14px_40px_rgba(0,0,0,0.35)] backdrop-blur space-y-3">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-full overflow-hidden border border-[#E53935]/60">
-              <img src="/fiends/ape.jpg" alt="Fiend feature" className="w-full h-full object-cover" />
-            </div>
-            <div>
-              <h3 className="font-bold text-white">Fiend Feature</h3>
-              <p className="text-xs text-slate-400">Short loop from your collection</p>
-              <p className="text-[11px] text-slate-500">Video hosted locally from /public/fiends (mp4); plays inline.</p>
-            </div>
-          </div>
-          <div className="relative rounded-lg overflow-hidden border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
-            <video
-              className="w-full h-full object-cover"
-              muted
-              playsInline
-              autoPlay
-              loop
-              controls
-              preload="metadata"
-              poster="/fiends/ape.jpg"
-              style={{ maxHeight: 220 }}
-            >
-              <source src="/fiends/fiend-loop.mp4" type="video/mp4" />
-              <source src="/fiends/Ape_s_Shocking_NFT_Declaration.mp4" type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
-          </div>
-        </div>
-
         {/* Meme Generator */}
             <div className="bg-[rgba(12,10,20,0.65)] p-4 rounded-xl border border-[#8C52FF]/40 shadow-[0_14px_40px_rgba(0,0,0,0.35)] backdrop-blur">
           <div className="flex items-center gap-2 mb-2">
@@ -1774,9 +1743,17 @@ const [templateError, setTemplateError] = useState<string | null>(null);
 
         {/* Loading */}
         {loading && (
-          <div className="flex flex-col items-center justify-center py-20">
-            <span className="animate-spin h-10 w-10 border-4 border-purple-500 border-t-transparent rounded-full mb-4"></span>
-            <p className="text-slate-400">Loading your collection...</p>
+          <div
+            className="flex flex-col items-center justify-center py-16 px-4 text-center rounded-2xl border border-white/10 shadow-[0_16px_50px_rgba(0,0,0,0.35)]"
+            style={{
+              backgroundImage: "linear-gradient(180deg, rgba(8,6,14,0.9), rgba(8,6,14,0.9)), url('/fiends/ETHFIENDS-banner.png')",
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          >
+            <span className="animate-spin h-10 w-10 border-4 border-[#8C52FF] border-t-transparent rounded-full mb-4"></span>
+            <p className="text-white font-semibold text-lg">Loading your Fiends...</p>
+            <p className="text-slate-300 text-sm mt-1">Pulling NFTs and floor prices</p>
           </div>
         )}
 
