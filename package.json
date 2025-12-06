@@ -14,6 +14,7 @@
     "@opensea/seaport-js": "^4.0.5",
     "@tanstack/react-query": "^5.90.12",
     "@vercel/og": "^0.8.5",
+    "@zoralabs/protocol-sdk": "^0.13.14",
     "alchemy-sdk": "^3.6.5",
     "ethers": "^6.16.0",
     "gif-encoder-2": "^1.0.5",

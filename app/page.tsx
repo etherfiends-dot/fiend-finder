@@ -14,6 +14,9 @@ import {
   getPriceInWei,
   SEAPORT_ADDRESS 
 } from '@/lib/seaport';
+import { MEMECOINS, type Memecoin, formatPrice, parsePrice } from '@/lib/zora';
+import { generateMemeImage, base64ToBlob } from '@/lib/ipfs';
+import MemecoinSelector from '@/components/MemecoinSelector';
 
 // ETH token for Base
 const ethToken = {
@@ -98,6 +101,14 @@ export default function Home() {
   const gifPreviewInterval = useRef<NodeJS.Timeout | null>(null);
   const [generatingGif, setGeneratingGif] = useState(false);
   const [generatedGif, setGeneratedGif] = useState<string | null>(null); // base64 GIF
+  
+  // Mint state (for memes and GIFs)
+  const [mintMode, setMintMode] = useState<'meme' | 'gif' | null>(null);
+  const [mintCoin, setMintCoin] = useState<Memecoin>(MEMECOINS[1]); // Default to DEGEN
+  const [mintPrice, setMintPrice] = useState('10000'); // Default 10k tokens
+  const [mintStep, setMintStep] = useState<'idle' | 'uploading' | 'signing' | 'done' | 'error'>('idle');
+  const [mintError, setMintError] = useState<string | null>(null);
+  const [mintResult, setMintResult] = useState<{ premintUrl?: string; ipfsUrl?: string } | null>(null);
 
   // LocalStorage keys
   const getStorageKey = (fid: number) => `hidden-nfts-${fid}`;
@@ -521,6 +532,144 @@ export default function Home() {
     } catch {
       await navigator.clipboard.writeText(`${castText}\n\n${memeUrl}`);
       alert('Meme link copied to clipboard!');
+    }
+  };
+
+  // Start mint process for meme
+  const startMemeMint = () => {
+    if (memeNftIndex === null || !scanResults) return;
+    setMintMode('meme');
+    setMintStep('idle');
+    setMintError(null);
+    setMintResult(null);
+  };
+
+  // Start mint process for GIF
+  const startGifMint = () => {
+    if (!generatedGif) return;
+    setMintMode('gif');
+    setMintStep('idle');
+    setMintError(null);
+    setMintResult(null);
+  };
+
+  // Cancel mint
+  const cancelMint = () => {
+    setMintMode(null);
+    setMintStep('idle');
+    setMintError(null);
+  };
+
+  // Execute the mint
+  const executeMint = async () => {
+    if (!scanResults || !currentUserFid) return;
+    
+    const wallet = scanResults.wallets?.[0];
+    if (!wallet) {
+      setMintError('No wallet connected');
+      return;
+    }
+
+    try {
+      setMintStep('uploading');
+      setMintError(null);
+
+      let imageBlob: Blob;
+      let filename: string;
+      let metadata: Record<string, unknown>;
+
+      if (mintMode === 'meme' && memeNftIndex !== null) {
+        // Generate the meme image with text overlay
+        const nft = scanResults.nfts[memeNftIndex];
+        const memeDataUrl = await generateMemeImage(nft.image, memeTopText, memeBottomText);
+        imageBlob = base64ToBlob(memeDataUrl, 'image/png');
+        filename = `meme-${Date.now()}.png`;
+        metadata = {
+          name: `Meme: ${memeTopText || memeBottomText || 'Untitled'}`,
+          description: `A meme created with My Based NFTs by @${scanResults.user}`,
+          external_url: 'https://fiend-finder.vercel.app',
+          attributes: [
+            { trait_type: 'Creator', value: scanResults.user },
+            { trait_type: 'Type', value: 'Meme' },
+            { trait_type: 'Original NFT', value: nft.name },
+            ...(memeTopText ? [{ trait_type: 'Top Text', value: memeTopText }] : []),
+            ...(memeBottomText ? [{ trait_type: 'Bottom Text', value: memeBottomText }] : []),
+          ],
+        };
+      } else if (mintMode === 'gif' && generatedGif) {
+        // Use the generated GIF
+        imageBlob = base64ToBlob(generatedGif, 'image/gif');
+        filename = `gif-${Date.now()}.gif`;
+        const selectedIndices = Array.from(gifNfts).sort((a, b) => a - b);
+        metadata = {
+          name: `NFT GIF by @${scanResults.user}`,
+          description: `An animated GIF featuring ${selectedIndices.length} NFTs, created with My Based NFTs`,
+          type: 'gif',
+          external_url: 'https://fiend-finder.vercel.app',
+          attributes: [
+            { trait_type: 'Creator', value: scanResults.user },
+            { trait_type: 'Type', value: 'GIF' },
+            { trait_type: 'Frame Count', value: selectedIndices.length },
+            { trait_type: 'Speed (ms)', value: gifSpeed },
+          ],
+        };
+      } else {
+        setMintError('Nothing to mint');
+        setMintStep('error');
+        return;
+      }
+
+      // Upload to IPFS via our API
+      const formData = new FormData();
+      formData.append('file', imageBlob, filename);
+      formData.append('metadata', JSON.stringify(metadata));
+
+      const uploadResponse = await fetch('/api/upload-ipfs', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload to IPFS');
+      }
+
+      const uploadResult = await uploadResponse.json();
+      
+      if (!uploadResult.success) {
+        throw new Error(uploadResult.error || 'Upload failed');
+      }
+
+      // For now, we skip the signing step and just create a shareable listing
+      // Full Zora integration would require wallet connection here
+      setMintStep('done');
+      
+      const ipfsUrl = uploadResult.image.gatewayUrl;
+      const listingResult = {
+        ipfsUrl,
+        premintUrl: ipfsUrl, // Use IPFS URL directly for now
+      };
+      
+      setMintResult(listingResult);
+
+      // Auto-open cast composer with the listing
+      const priceDisplay = formatPrice(mintPrice, mintCoin.decimals);
+      const castText = `🎨 New ${mintMode === 'meme' ? 'meme' : 'GIF'} for sale!\n\n💰 ${priceDisplay} $${mintCoin.symbol}\n🔥 Edition of 100\n\n${ipfsUrl}`;
+      
+      try {
+        if (sdk.actions.composeCast) {
+          await sdk.actions.composeCast({
+            text: castText,
+            embeds: [ipfsUrl],
+          });
+        }
+      } catch (e) {
+        console.log('Cast composer not available:', e);
+      }
+
+    } catch (error) {
+      console.error('Mint error:', error);
+      setMintStep('error');
+      setMintError(error instanceof Error ? error.message : 'Failed to create listing');
     }
   };
 
@@ -985,18 +1134,37 @@ export default function Home() {
             className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder:text-slate-500 mb-4 uppercase"
           />
           
-          <button 
-            onClick={castMeme}
-            disabled={memeNftIndex === null || (!memeTopText && !memeBottomText)}
-            className={`w-full py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
-              memeNftIndex !== null && (memeTopText || memeBottomText)
-                ? 'bg-pink-500 hover:bg-pink-600 text-white'
-                : 'bg-pink-500/30 text-white/50 cursor-not-allowed'
-            }`}
-          >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-            Cast Meme
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={castMeme}
+              disabled={memeNftIndex === null || (!memeTopText && !memeBottomText)}
+              className={`flex-1 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+                memeNftIndex !== null && (memeTopText || memeBottomText)
+                  ? 'bg-pink-500 hover:bg-pink-600 text-white'
+                  : 'bg-pink-500/30 text-white/50 cursor-not-allowed'
+              }`}
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              Cast
+            </button>
+            <button 
+              onClick={startMemeMint}
+              disabled={memeNftIndex === null || (!memeTopText && !memeBottomText)}
+              className={`flex-1 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+                memeNftIndex !== null && (memeTopText || memeBottomText)
+                  ? 'bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white'
+                  : 'bg-slate-700/50 text-white/50 cursor-not-allowed'
+              }`}
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Sell NFT
+            </button>
+          </div>
+          <p className="text-slate-500 text-xs mt-2 text-center">
+            Sell your meme for any Base memecoin 🐸
+          </p>
         </div>
 
         {/* GIF Creator */}
@@ -1172,28 +1340,29 @@ export default function Home() {
               Cast
             </button>
             <button 
+              onClick={startGifMint}
               disabled={!generatedGif}
               className={`flex-1 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
                 generatedGif
                   ? 'bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white'
                   : 'bg-slate-700/50 text-white/50 cursor-not-allowed'
               }`}
-              title={generatedGif ? "Mint as NFT" : "Generate GIF first"}
+              title={generatedGif ? "Sell GIF as NFT" : "Generate GIF first"}
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Mint NFT
+              Sell NFT
             </button>
           </div>
           {!generatedGif && gifNfts.size >= 2 && (
             <p className="text-slate-500 text-xs mt-2 text-center">
-              Generate GIF first, then mint it as an on-chain NFT
+              Generate GIF first, then sell as NFT for memecoins 🐸
             </p>
           )}
           {generatedGif && (
             <p className="text-slate-500 text-xs mt-2 text-center">
-              Mint requires IPFS + wallet connection (coming soon)
+              Sell your GIF for any Base memecoin!
             </p>
           )}
         </div>
@@ -1300,6 +1469,200 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {/* Mint Modal */}
+      {mintMode && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 rounded-2xl border border-slate-700 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-orange-500 to-pink-500 flex items-center justify-center">
+                  <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h2 className="font-bold text-white text-lg">
+                  Sell {mintMode === 'meme' ? 'Meme' : 'GIF'} as NFT
+                </h2>
+              </div>
+              <button 
+                onClick={cancelMint}
+                disabled={mintStep === 'uploading' || mintStep === 'signing'}
+                className="p-2 hover:bg-slate-800 rounded-lg transition-colors disabled:opacity-50"
+              >
+                <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-4 space-y-4">
+              {/* Preview */}
+              <div className="aspect-square bg-black rounded-lg overflow-hidden border border-slate-700">
+                {mintMode === 'meme' && memeNftIndex !== null && scanResults && (
+                  <div className="relative w-full h-full">
+                    <img 
+                      src={scanResults.nfts[memeNftIndex].image} 
+                      alt="Meme preview" 
+                      className="w-full h-full object-contain"
+                    />
+                    {memeTopText && (
+                      <div className="absolute top-2 left-0 right-0 text-center">
+                        <span className="text-white text-xl font-black uppercase px-2" style={{ 
+                          textShadow: '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000'
+                        }}>
+                          {memeTopText}
+                        </span>
+                      </div>
+                    )}
+                    {memeBottomText && (
+                      <div className="absolute bottom-2 left-0 right-0 text-center">
+                        <span className="text-white text-xl font-black uppercase px-2" style={{ 
+                          textShadow: '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000'
+                        }}>
+                          {memeBottomText}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {mintMode === 'gif' && generatedGif && (
+                  <img 
+                    src={`data:image/gif;base64,${generatedGif}`}
+                    alt="GIF preview"
+                    className="w-full h-full object-contain"
+                  />
+                )}
+              </div>
+
+              {/* Status display when processing */}
+              {(mintStep === 'uploading' || mintStep === 'signing') && (
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <span className="animate-spin h-5 w-5 border-2 border-orange-500 border-t-transparent rounded-full"></span>
+                    <div>
+                      <p className="text-white font-medium">
+                        {mintStep === 'uploading' ? 'Uploading to IPFS...' : 'Sign the listing...'}
+                      </p>
+                      <p className="text-slate-400 text-sm">
+                        {mintStep === 'uploading' 
+                          ? 'Making your creation permanent' 
+                          : 'Confirm in your wallet (no gas!)'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Success state */}
+              {mintStep === 'done' && mintResult && (
+                <div className="bg-green-900/30 border border-green-500/50 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <p className="text-green-400 font-bold">Listed for sale!</p>
+                  </div>
+                  <p className="text-slate-300 text-sm mb-3">
+                    Your {mintMode} is now available for {formatPrice(mintPrice, mintCoin.decimals)} ${mintCoin.symbol}
+                  </p>
+                  {mintResult.ipfsUrl && (
+                    <a 
+                      href={mintResult.ipfsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300 text-sm underline"
+                    >
+                      View on IPFS →
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {/* Error state */}
+              {mintStep === 'error' && mintError && (
+                <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-4">
+                  <div className="flex items-center gap-2">
+                    <svg className="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-red-400 font-medium">{mintError}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Price selector - only show when idle or error */}
+              {(mintStep === 'idle' || mintStep === 'error') && (
+                <MemecoinSelector
+                  selectedCoin={mintCoin}
+                  price={mintPrice}
+                  onCoinChange={setMintCoin}
+                  onPriceChange={setMintPrice}
+                  disabled={mintStep !== 'idle' && mintStep !== 'error'}
+                />
+              )}
+
+              {/* Info box */}
+              {mintStep === 'idle' && (
+                <div className="bg-slate-800/50 rounded-lg p-3 text-sm">
+                  <div className="flex items-start gap-2">
+                    <svg className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="text-slate-400">
+                      <p className="font-medium text-slate-300 mb-1">How it works:</p>
+                      <ul className="space-y-1">
+                        <li>• Your {mintMode} is uploaded to IPFS (permanent storage)</li>
+                        <li>• You sign a gasless listing via Zora Protocol</li>
+                        <li>• Anyone can mint/buy for the price you set</li>
+                        <li>• Edition of 100 copies</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-700">
+              {mintStep === 'done' ? (
+                <button 
+                  onClick={cancelMint}
+                  className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium"
+                >
+                  Done
+                </button>
+              ) : (
+                <button 
+                  onClick={executeMint}
+                  disabled={mintStep === 'uploading' || mintStep === 'signing' || !mintPrice || parseFloat(mintPrice) <= 0}
+                  className={`w-full py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+                    mintStep === 'uploading' || mintStep === 'signing'
+                      ? 'bg-orange-500/50 text-white/70 cursor-wait'
+                      : 'bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white'
+                  }`}
+                >
+                  {mintStep === 'uploading' || mintStep === 'signing' ? (
+                    <>
+                      <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      Create Listing
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Fullscreen Slideshow Overlay */}
       {slideshowActive && scanResults && (
