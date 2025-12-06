@@ -1128,65 +1128,6 @@ const [templateError, setTemplateError] = useState<string | null>(null);
     
     return (
       <div className="space-y-6">
-        {/* Top 3 Curator */}
-        <div className="bg-gradient-to-br from-yellow-900/20 to-slate-900 p-4 rounded-xl border border-yellow-500/30">
-          <div className="flex items-center gap-2 mb-2">
-            <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-            </svg>
-            <h3 className="font-bold text-white">Top 3 Curator</h3>
-          </div>
-          <p className="text-slate-400 text-sm mb-3">Select your 3 favorite NFTs to share</p>
-          
-          {/* Selection counter and Cast button */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-slate-400 text-sm">Selected: <span className={`font-bold ${selectedNfts.size === 3 ? 'text-green-400' : 'text-yellow-400'}`}>{selectedNfts.size}/3</span></span>
-              {selectedNfts.size > 0 && (
-                <button 
-                  onClick={() => setSelectedNfts(new Set())}
-                  className="text-slate-500 hover:text-red-400 text-xs underline"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-            {selectedNfts.size === 3 && (
-              <button onClick={castTriptych} className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black rounded-lg text-sm font-bold flex items-center gap-2">
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                Cast Top 3
-              </button>
-            )}
-          </div>
-
-          {/* Mini NFT selector grid */}
-          <div className="grid grid-cols-5 gap-2">
-            {scanResults.nfts.slice(0, 15).map((nft, i) => {
-              const key = getNftKey(nft, i);
-              if (hiddenNfts.has(key)) return null;
-              const isSelected = selectedNfts.has(key);
-              const selectionOrder = isSelected ? Array.from(selectedNfts).indexOf(key) + 1 : null;
-              return (
-                <button
-                  key={key}
-                  onClick={() => toggleSelectNft(key)}
-                  disabled={selectedNfts.size >= 3 && !isSelected}
-                  className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                    isSelected ? 'border-yellow-500 ring-2 ring-yellow-500/50' : 'border-slate-700 hover:border-yellow-500/50'
-                  } ${selectedNfts.size >= 3 && !isSelected ? 'opacity-30' : ''}`}
-                >
-                  <img src={nft.image} alt={nft.name} className="w-full h-full object-cover" />
-                  {isSelected && selectionOrder && (
-                    <div className="absolute top-0 right-0 w-5 h-5 bg-yellow-500 rounded-bl-lg flex items-center justify-center">
-                      <span className="text-black text-xs font-bold">{selectionOrder}</span>
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         {/* Meme Generator */}
         <div className="bg-gradient-to-br from-pink-900/20 to-slate-900 p-4 rounded-xl border border-pink-500/30">
           <div className="flex items-center gap-2 mb-2">
@@ -1623,6 +1564,65 @@ const [templateError, setTemplateError] = useState<string | null>(null);
               Generate GIF first, then share or sell it
             </p>
           )}
+        </div>
+
+        {/* Top 3 Curator (moved lower, above slideshow) */}
+        <div className="bg-gradient-to-br from-yellow-900/20 to-slate-900 p-4 rounded-xl border border-yellow-500/30">
+          <div className="flex items-center gap-2 mb-2">
+            <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            </svg>
+            <h3 className="font-bold text-white">Top 3 Curator</h3>
+          </div>
+          <p className="text-slate-400 text-sm mb-3">Select your 3 favorite NFTs to share</p>
+          
+          {/* Selection counter and Cast button */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-slate-400 text-sm">Selected: <span className={`font-bold ${selectedNfts.size === 3 ? 'text-green-400' : 'text-yellow-400'}`}>{selectedNfts.size}/3</span></span>
+              {selectedNfts.size > 0 && (
+                <button 
+                  onClick={() => setSelectedNfts(new Set())}
+                  className="text-slate-500 hover:text-red-400 text-xs underline"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {selectedNfts.size === 3 && (
+              <button onClick={castTriptych} className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black rounded-lg text-sm font-bold flex items-center gap-2">
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                Cast Top 3
+              </button>
+            )}
+          </div>
+
+          {/* Mini NFT selector grid */}
+          <div className="grid grid-cols-5 gap-2">
+            {scanResults.nfts.slice(0, 15).map((nft, i) => {
+              const key = getNftKey(nft, i);
+              if (hiddenNfts.has(key)) return null;
+              const isSelected = selectedNfts.has(key);
+              const selectionOrder = isSelected ? Array.from(selectedNfts).indexOf(key) + 1 : null;
+              return (
+                <button
+                  key={key}
+                  onClick={() => toggleSelectNft(key)}
+                  disabled={selectedNfts.size >= 3 && !isSelected}
+                  className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                    isSelected ? 'border-yellow-500 ring-2 ring-yellow-500/50' : 'border-slate-700 hover:border-yellow-500/50'
+                  } ${selectedNfts.size >= 3 && !isSelected ? 'opacity-30' : ''}`}
+                >
+                  <img src={nft.image} alt={nft.name} className="w-full h-full object-cover" />
+                  {isSelected && selectionOrder && (
+                    <div className="absolute top-0 right-0 w-5 h-5 bg-yellow-500 rounded-bl-lg flex items-center justify-center">
+                      <span className="text-black text-xs font-bold">{selectionOrder}</span>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Digital Frame (moved lower to feature creation tools first) */}
