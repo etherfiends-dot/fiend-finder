@@ -225,7 +225,7 @@ export default function Home() {
     }));
     
     const memeUrl = `${window.location.origin}/meme?data=${encoded}`;
-    const castText = memeTopText || memeBottomText || '😂';
+    const castText = `check out the meme I made with My BASED NFT's 😂`;
     
     try {
       if (sdk.actions.composeCast) {
