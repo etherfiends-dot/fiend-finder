@@ -104,6 +104,7 @@ export default function Home() {
   
   // Mint state (for memes and GIFs)
   const [mintMode, setMintMode] = useState<'meme' | 'gif' | null>(null);
+  const [mintAction, setMintAction] = useState<'cast' | 'mint' | 'sell'>('cast'); // cast=free share, mint=own it, sell=list for sale
   const [mintCoin, setMintCoin] = useState<Memecoin>(MEMECOINS[1]); // Default to DEGEN
   const [mintPrice, setMintPrice] = useState('10000'); // Default 10k tokens
   const [mintStep, setMintStep] = useState<'idle' | 'uploading' | 'signing' | 'done' | 'error'>('idle');
@@ -539,6 +540,7 @@ export default function Home() {
   const startMemeMint = () => {
     if (memeNftIndex === null || !scanResults) return;
     setMintMode('meme');
+    setMintAction('cast'); // Default to cast/share
     setMintStep('idle');
     setMintError(null);
     setMintResult(null);
@@ -548,6 +550,7 @@ export default function Home() {
   const startGifMint = () => {
     if (!generatedGif) return;
     setMintMode('gif');
+    setMintAction('cast'); // Default to cast/share
     setMintStep('idle');
     setMintError(null);
     setMintResult(null);
@@ -560,15 +563,11 @@ export default function Home() {
     setMintError(null);
   };
 
-  // Execute the mint
+  // Execute the action (cast, mint, or sell)
   const executeMint = async () => {
     if (!scanResults || !currentUserFid) return;
     
     const wallet = scanResults.wallets?.[0];
-    if (!wallet) {
-      setMintError('No wallet connected');
-      return;
-    }
 
     try {
       setMintStep('uploading');
@@ -614,7 +613,7 @@ export default function Home() {
           ],
         };
       } else {
-        setMintError('Nothing to mint');
+        setMintError('Nothing to create');
         setMintStep('error');
         return;
       }
@@ -639,21 +638,31 @@ export default function Home() {
         throw new Error(uploadResult.error || 'Upload failed');
       }
 
-      // For now, we skip the signing step and just create a shareable listing
-      // Full Zora integration would require wallet connection here
       setMintStep('done');
       
       const ipfsUrl = uploadResult.image.gatewayUrl;
       const listingResult = {
         ipfsUrl,
-        premintUrl: ipfsUrl, // Use IPFS URL directly for now
+        premintUrl: ipfsUrl,
       };
       
       setMintResult(listingResult);
 
-      // Auto-open cast composer with the listing
-      const priceDisplay = formatPrice(mintPrice, mintCoin.decimals);
-      const castText = `🎨 New ${mintMode === 'meme' ? 'meme' : 'GIF'} for sale!\n\n💰 ${priceDisplay} $${mintCoin.symbol}\n🔥 Edition of 100\n\n${ipfsUrl}`;
+      // Generate cast text based on action
+      let castText = '';
+      const contentType = mintMode === 'meme' ? 'meme' : 'GIF';
+      
+      if (mintAction === 'cast') {
+        // Just sharing - no pricing info
+        castText = `Check out this ${contentType} I made with My Based NFTs! 🎨`;
+      } else if (mintAction === 'mint') {
+        // Minting for themselves - link to Zora
+        castText = `I just created a new ${contentType} NFT! 🖼️✨\n\nMint your own at:`;
+      } else if (mintAction === 'sell') {
+        // Selling - include price
+        const priceDisplay = formatPrice(mintPrice, mintCoin.decimals);
+        castText = `🎨 New ${contentType} for sale!\n\n💰 ${priceDisplay} $${mintCoin.symbol}\n🔥 Edition of 100`;
+      }
       
       try {
         if (sdk.actions.composeCast) {
@@ -667,9 +676,9 @@ export default function Home() {
       }
 
     } catch (error) {
-      console.error('Mint error:', error);
+      console.error('Action error:', error);
       setMintStep('error');
-      setMintError(error instanceof Error ? error.message : 'Failed to create listing');
+      setMintError(error instanceof Error ? error.message : 'Failed to complete action');
     }
   };
 
@@ -1470,22 +1479,15 @@ export default function Home() {
         )}
       </div>
 
-      {/* Mint Modal */}
+      {/* Action Modal - Cast, Mint, or Sell */}
       {mintMode && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 rounded-2xl border border-slate-700 w-full max-w-md max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-slate-700">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-orange-500 to-pink-500 flex items-center justify-center">
-                  <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <h2 className="font-bold text-white text-lg">
-                  Sell {mintMode === 'meme' ? 'Meme' : 'GIF'} as NFT
-                </h2>
-              </div>
+              <h2 className="font-bold text-white text-lg">
+                Share Your {mintMode === 'meme' ? 'Meme' : 'GIF'}
+              </h2>
               <button 
                 onClick={cancelMint}
                 disabled={mintStep === 'uploading' || mintStep === 'signing'}
@@ -1499,28 +1501,28 @@ export default function Home() {
 
             {/* Content */}
             <div className="p-4 space-y-4">
-              {/* Preview */}
-              <div className="aspect-square bg-black rounded-lg overflow-hidden border border-slate-700">
+              {/* Preview - smaller */}
+              <div className="aspect-video bg-black rounded-xl overflow-hidden border border-slate-700 max-h-48 mx-auto">
                 {mintMode === 'meme' && memeNftIndex !== null && scanResults && (
-                  <div className="relative w-full h-full">
+                  <div className="relative w-full h-full flex items-center justify-center">
                     <img 
                       src={scanResults.nfts[memeNftIndex].image} 
                       alt="Meme preview" 
-                      className="w-full h-full object-contain"
+                      className="max-w-full max-h-full object-contain"
                     />
                     {memeTopText && (
-                      <div className="absolute top-2 left-0 right-0 text-center">
-                        <span className="text-white text-xl font-black uppercase px-2" style={{ 
-                          textShadow: '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000'
+                      <div className="absolute top-1 left-0 right-0 text-center">
+                        <span className="text-white text-sm font-black uppercase px-2" style={{ 
+                          textShadow: '1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000'
                         }}>
                           {memeTopText}
                         </span>
                       </div>
                     )}
                     {memeBottomText && (
-                      <div className="absolute bottom-2 left-0 right-0 text-center">
-                        <span className="text-white text-xl font-black uppercase px-2" style={{ 
-                          textShadow: '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000'
+                      <div className="absolute bottom-1 left-0 right-0 text-center">
+                        <span className="text-white text-sm font-black uppercase px-2" style={{ 
+                          textShadow: '1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000'
                         }}>
                           {memeBottomText}
                         </span>
@@ -1537,19 +1539,111 @@ export default function Home() {
                 )}
               </div>
 
+              {/* Action selector - only show when idle */}
+              {mintStep === 'idle' && (
+                <div className="space-y-2">
+                  <p className="text-slate-400 text-xs uppercase tracking-wide">What do you want to do?</p>
+                  
+                  {/* Cast/Share option */}
+                  <button
+                    onClick={() => setMintAction('cast')}
+                    className={`w-full p-3 rounded-xl border-2 transition-all text-left ${
+                      mintAction === 'cast'
+                        ? 'border-purple-500 bg-purple-500/10'
+                        : 'border-slate-700 hover:border-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        mintAction === 'cast' ? 'bg-purple-500' : 'bg-slate-800'
+                      }`}>
+                        <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-white">Cast / Share</p>
+                        <p className="text-slate-400 text-sm">Share freely on Farcaster</p>
+                      </div>
+                      <span className="text-green-400 text-sm font-medium">FREE</span>
+                    </div>
+                  </button>
+
+                  {/* Mint option */}
+                  <button
+                    onClick={() => setMintAction('mint')}
+                    className={`w-full p-3 rounded-xl border-2 transition-all text-left ${
+                      mintAction === 'mint'
+                        ? 'border-cyan-500 bg-cyan-500/10'
+                        : 'border-slate-700 hover:border-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        mintAction === 'mint' ? 'bg-cyan-500' : 'bg-slate-800'
+                      }`}>
+                        <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-white">Mint NFT</p>
+                        <p className="text-slate-400 text-sm">Own it on-chain forever</p>
+                      </div>
+                      <span className="text-slate-400 text-sm">+ gas</span>
+                    </div>
+                  </button>
+
+                  {/* Sell option */}
+                  <button
+                    onClick={() => setMintAction('sell')}
+                    className={`w-full p-3 rounded-xl border-2 transition-all text-left ${
+                      mintAction === 'sell'
+                        ? 'border-orange-500 bg-orange-500/10'
+                        : 'border-slate-700 hover:border-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        mintAction === 'sell' ? 'bg-gradient-to-br from-orange-500 to-pink-500' : 'bg-slate-800'
+                      }`}>
+                        <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-white">Sell for Memecoins</p>
+                        <p className="text-slate-400 text-sm">List for any Base token</p>
+                      </div>
+                      <span className="text-orange-400 text-sm font-medium">💰</span>
+                    </div>
+                  </button>
+                </div>
+              )}
+
+              {/* Memecoin selector - only show for sell action */}
+              {mintStep === 'idle' && mintAction === 'sell' && (
+                <div className="pt-2">
+                  <MemecoinSelector
+                    selectedCoin={mintCoin}
+                    price={mintPrice}
+                    onCoinChange={setMintCoin}
+                    onPriceChange={setMintPrice}
+                  />
+                </div>
+              )}
+
               {/* Status display when processing */}
               {(mintStep === 'uploading' || mintStep === 'signing') && (
-                <div className="bg-slate-800/50 rounded-lg p-4">
+                <div className="bg-slate-800/50 rounded-xl p-4">
                   <div className="flex items-center gap-3">
-                    <span className="animate-spin h-5 w-5 border-2 border-orange-500 border-t-transparent rounded-full"></span>
+                    <span className="animate-spin h-6 w-6 border-2 border-purple-500 border-t-transparent rounded-full"></span>
                     <div>
                       <p className="text-white font-medium">
-                        {mintStep === 'uploading' ? 'Uploading to IPFS...' : 'Sign the listing...'}
+                        {mintStep === 'uploading' ? 'Uploading to IPFS...' : 'Creating listing...'}
                       </p>
                       <p className="text-slate-400 text-sm">
-                        {mintStep === 'uploading' 
-                          ? 'Making your creation permanent' 
-                          : 'Confirm in your wallet (no gas!)'}
+                        Making your creation permanent
                       </p>
                     </div>
                   </div>
@@ -1558,15 +1652,20 @@ export default function Home() {
 
               {/* Success state */}
               {mintStep === 'done' && mintResult && (
-                <div className="bg-green-900/30 border border-green-500/50 rounded-lg p-4">
+                <div className="bg-green-900/30 border border-green-500/50 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    <p className="text-green-400 font-bold">Listed for sale!</p>
+                    <p className="text-green-400 font-bold">
+                      {mintAction === 'cast' ? 'Ready to share!' : mintAction === 'mint' ? 'Minted!' : 'Listed for sale!'}
+                    </p>
                   </div>
                   <p className="text-slate-300 text-sm mb-3">
-                    Your {mintMode} is now available for {formatPrice(mintPrice, mintCoin.decimals)} ${mintCoin.symbol}
+                    {mintAction === 'sell' 
+                      ? `Your ${mintMode} is available for ${formatPrice(mintPrice, mintCoin.decimals)} $${mintCoin.symbol}`
+                      : `Your ${mintMode} has been uploaded to IPFS`
+                    }
                   </p>
                   {mintResult.ipfsUrl && (
                     <a 
@@ -1583,44 +1682,19 @@ export default function Home() {
 
               {/* Error state */}
               {mintStep === 'error' && mintError && (
-                <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-4">
+                <div className="bg-red-900/30 border border-red-500/50 rounded-xl p-4">
                   <div className="flex items-center gap-2">
                     <svg className="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <p className="text-red-400 font-medium">{mintError}</p>
                   </div>
-                </div>
-              )}
-
-              {/* Price selector - only show when idle or error */}
-              {(mintStep === 'idle' || mintStep === 'error') && (
-                <MemecoinSelector
-                  selectedCoin={mintCoin}
-                  price={mintPrice}
-                  onCoinChange={setMintCoin}
-                  onPriceChange={setMintPrice}
-                  disabled={mintStep !== 'idle' && mintStep !== 'error'}
-                />
-              )}
-
-              {/* Info box */}
-              {mintStep === 'idle' && (
-                <div className="bg-slate-800/50 rounded-lg p-3 text-sm">
-                  <div className="flex items-start gap-2">
-                    <svg className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <div className="text-slate-400">
-                      <p className="font-medium text-slate-300 mb-1">How it works:</p>
-                      <ul className="space-y-1">
-                        <li>• Your {mintMode} is uploaded to IPFS (permanent storage)</li>
-                        <li>• You sign a gasless listing via Zora Protocol</li>
-                        <li>• Anyone can mint/buy for the price you set</li>
-                        <li>• Edition of 100 copies</li>
-                      </ul>
-                    </div>
-                  </div>
+                  <button
+                    onClick={() => setMintStep('idle')}
+                    className="mt-3 text-sm text-slate-400 hover:text-white underline"
+                  >
+                    Try again
+                  </button>
                 </div>
               )}
             </div>
@@ -1630,28 +1704,46 @@ export default function Home() {
               {mintStep === 'done' ? (
                 <button 
                   onClick={cancelMint}
-                  className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium"
+                  className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-medium transition-colors"
                 >
                   Done
                 </button>
               ) : (
                 <button 
                   onClick={executeMint}
-                  disabled={mintStep === 'uploading' || mintStep === 'signing' || !mintPrice || parseFloat(mintPrice) <= 0}
-                  className={`w-full py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+                  disabled={mintStep === 'uploading' || mintStep === 'signing' || (mintAction === 'sell' && (!mintPrice || parseFloat(mintPrice) <= 0))}
+                  className={`w-full py-3.5 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
                     mintStep === 'uploading' || mintStep === 'signing'
-                      ? 'bg-orange-500/50 text-white/70 cursor-wait'
-                      : 'bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white'
-                  }`}
+                      ? 'bg-purple-500/50 text-white/70 cursor-wait'
+                      : mintAction === 'cast'
+                        ? 'bg-purple-500 hover:bg-purple-600 text-white'
+                        : mintAction === 'mint'
+                          ? 'bg-cyan-500 hover:bg-cyan-600 text-white'
+                          : 'bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   {mintStep === 'uploading' || mintStep === 'signing' ? (
                     <>
                       <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
                       Processing...
                     </>
+                  ) : mintAction === 'cast' ? (
+                    <>
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                      </svg>
+                      Cast to Farcaster
+                    </>
+                  ) : mintAction === 'mint' ? (
+                    <>
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      Mint NFT
+                    </>
                   ) : (
                     <>
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                       </svg>
                       Create Listing
