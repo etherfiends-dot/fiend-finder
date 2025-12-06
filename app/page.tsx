@@ -1129,7 +1129,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
     return (
       <div className="space-y-6">
         {/* Meme Generator */}
-        <div className="bg-gradient-to-br from-[#2b1027]/60 via-[#1a0f23] to-[#0c0a14] p-4 rounded-xl border border-[#8C52FF]/40">
+            <div className="bg-[rgba(12,10,20,0.65)] p-4 rounded-xl border border-[#8C52FF]/40 shadow-[0_14px_40px_rgba(0,0,0,0.35)] backdrop-blur">
           <div className="flex items-center gap-2 mb-2">
             <svg className="h-5 w-5 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1384,7 +1384,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
         </div>
 
         {/* GIF Creator */}
-        <div className="bg-gradient-to-br from-[#1a0f23] via-[#0f0d1b] to-[#0b0914] p-4 rounded-xl border border-[#E53935]/40">
+        <div className="bg-[rgba(12,10,20,0.65)] p-4 rounded-xl border border-[#E53935]/40 shadow-[0_14px_40px_rgba(0,0,0,0.35)] backdrop-blur">
           <div className="flex items-center gap-2 mb-2">
             <svg className="h-5 w-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2m0 2v2m0-2h2m8 0h2m-2 0V2m0 2v2M3 20h18V8H3v12zm4-8h10m-10 4h4" />
@@ -1567,7 +1567,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
         </div>
 
         {/* Top 3 Curator (moved lower, above slideshow) */}
-        <div className="bg-gradient-to-br from-[#24110f] via-[#150f15] to-[#0c0a14] p-4 rounded-xl border border-[#E53935]/50">
+        <div className="bg-[rgba(12,10,20,0.65)] p-4 rounded-xl border border-[#E53935]/50 shadow-[0_14px_40px_rgba(0,0,0,0.35)] backdrop-blur">
           <div className="flex items-center gap-2 mb-2">
             <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
               <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
@@ -1626,7 +1626,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
         </div>
 
         {/* Digital Frame (moved lower to feature creation tools first) */}
-        <div className="bg-gradient-to-br from-[#120f1f] to-[#0b0914] p-4 rounded-xl border border-[#8C52FF]/40">
+        <div className="bg-[rgba(12,10,20,0.65)] p-4 rounded-xl border border-[#8C52FF]/40 shadow-[0_14px_40px_rgba(0,0,0,0.35)] backdrop-blur">
           <div className="flex items-center gap-2 mb-2">
             <svg className="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -1664,19 +1664,43 @@ const [templateError, setTemplateError] = useState<string | null>(null);
     );
   };
 
+  const design = {
+    primary: '#8C52FF',
+    accent: '#E53935',
+    surface: 'rgba(12, 10, 20, 0.8)',
+    border: 'rgba(140, 82, 255, 0.4)',
+    glow: '0 20px 60px rgba(140, 82, 255, 0.25)',
+    heroOverlay:
+      'linear-gradient(135deg, rgba(12,10,20,0.9) 0%, rgba(12,10,20,0.8) 40%, rgba(12,10,20,0.75) 100%)',
+    heroImage:
+      "url('/fiends/fiend-collage.png')",
+  };
+
   return (
-    <main className="bg-slate-950 min-h-screen text-white font-sans">
+    <main
+      className="bg-slate-950 min-h-screen text-white font-sans"
+      style={{
+        backgroundImage: `${design.heroOverlay}, ${design.heroImage}`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
       <div className="max-w-md mx-auto">
         {/* Header */}
-        <div className="text-center py-4 px-4">
-          <h1 className="text-2xl font-black tracking-tighter" style={{ color: '#8C52FF' }}>
+        <div className="text-center py-6 px-4">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
+            <span className="text-xs font-semibold tracking-wide text-white/80">EtherFiends Mini App</span>
+          </div>
+          <h1 className="text-3xl font-black tracking-tighter mt-3" style={{ color: design.primary, textShadow: '0 10px 40px rgba(0,0,0,0.35)' }}>
             Your Based NFTs
           </h1>
+          <p className="text-slate-300 text-sm mt-2">Gallery • Trade • Fun • Memes</p>
         </div>
 
         {/* Tab Navigation */}
         <div className="px-4 mb-4">
-          <div className="flex bg-slate-900 rounded-xl p-1">
+          <div className="flex bg-black/40 rounded-xl p-1 border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur">
             {[
               { id: 'gallery', label: 'Gallery', icon: '🖼️' },
               { id: 'trade', label: 'Trade', icon: '💰' },
@@ -1687,8 +1711,8 @@ const [templateError, setTemplateError] = useState<string | null>(null);
                 onClick={() => setActiveTab(tab.id as Tab)}
                 className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors ${
                   activeTab === tab.id
-                    ? 'bg-[#8C52FF] text-white'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-[#8C52FF] text-white shadow-[0_10px_30px_rgba(140,82,255,0.35)]'
+                    : 'text-slate-300 hover:text-white'
                 }`}
               >
                 <span className="mr-1">{tab.icon}</span>
@@ -1730,14 +1754,14 @@ const [templateError, setTemplateError] = useState<string | null>(null);
         {scanResults && !loading && (
           <div className="px-4 pb-8">
             {/* Profile Card - Always visible */}
-            <div className="bg-gradient-to-br from-[#120f1f] to-[#0b0914] p-4 rounded-2xl border border-[#8C52FF]/40 mb-4">
+            <div className="bg-[rgba(12,10,20,0.72)] p-4 rounded-2xl border border-[#8C52FF]/40 mb-4 shadow-[0_16px_50px_rgba(0,0,0,0.35)] backdrop-blur">
               <div className="flex items-center gap-4">
                 {scanResults.pfp && (
-                  <img src={scanResults.pfp} alt={scanResults.displayName} className="w-14 h-14 rounded-full border-2 border-purple-500" />
+                  <img src={scanResults.pfp} alt={scanResults.displayName} className="w-14 h-14 rounded-full border-2 border-[#8C52FF]" />
                 )}
                 <div className="flex-1">
                   <p className="font-bold text-white">{scanResults.displayName}</p>
-                  <p className="text-purple-400 text-sm">@{scanResults.user}</p>
+                  <p className="text-[#b08bff] text-sm">@{scanResults.user}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-bold text-white">{scanResults.totalFound}</p>
