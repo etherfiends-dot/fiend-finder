@@ -139,7 +139,7 @@ export default function Home() {
         
         {/* Header */}
         <div className="text-center mb-6 pt-4">
-          <h1 className="text-3xl font-black bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-transparent tracking-tighter">
+          <h1 className="text-3xl font-black tracking-tighter" style={{ color: '#0000f4' }}>
             Your Based NFTs
           </h1>
         </div>
