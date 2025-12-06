@@ -16,6 +16,7 @@ interface BundleData {
   sellerFid: number;
   sellerPfp: string;
   price: string;
+  currency: 'ETH' | 'USDC';
   nfts: BundleNft[];
 }
 
@@ -83,7 +84,9 @@ function BundleContent() {
             </svg>
             NFT Bundle for Sale
           </div>
-          <h1 className="text-3xl font-bold mb-2">{bundleData.price} ETH</h1>
+          <h1 className="text-3xl font-bold mb-2">
+            {bundleData.currency === 'USDC' ? '$' : ''}{bundleData.price} {bundleData.currency || 'ETH'}
+          </h1>
           <p className="text-slate-400">{bundleData.nfts.length} NFT{bundleData.nfts.length > 1 ? 's' : ''} included</p>
         </div>
 
@@ -125,12 +128,14 @@ function BundleContent() {
         <div className="bg-slate-900/50 rounded-xl p-4 mb-6 border border-slate-800">
           <div className="flex justify-between items-center mb-2">
             <span className="text-slate-400">Bundle Price</span>
-            <span className="font-bold text-xl">{bundleData.price} ETH</span>
+            <span className="font-bold text-xl">
+              {bundleData.currency === 'USDC' ? '$' : ''}{bundleData.price} {bundleData.currency || 'ETH'}
+            </span>
           </div>
           <div className="flex justify-between items-center text-sm">
             <span className="text-slate-500">Per NFT avg</span>
             <span className="text-slate-400">
-              ~{(parseFloat(bundleData.price) / bundleData.nfts.length).toFixed(4)} ETH
+              ~{bundleData.currency === 'USDC' ? '$' : ''}{(parseFloat(bundleData.price) / bundleData.nfts.length).toFixed(bundleData.currency === 'USDC' ? 2 : 4)} {bundleData.currency || 'ETH'}
             </span>
           </div>
         </div>

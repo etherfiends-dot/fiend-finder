@@ -63,7 +63,9 @@ export default function Home() {
   
   // Trade state
   const [bagNfts, setBagNfts] = useState<Set<string>>(new Set());
-  const [bagPrice, setBagPrice] = useState('');
+  const [bagPrice, setBagPrice] = useState('0.001');
+  const [bagCurrency, setBagCurrency] = useState<'ETH' | 'USDC'>('ETH');
+  const [ethPrice, setEthPrice] = useState<number | null>(null);
   const [swapUsername, setSwapUsername] = useState('');
   const [mySwapNft, setMySwapNft] = useState<string | null>(null);
   const [theirSwapNft, setTheirSwapNft] = useState<string | null>(null);
@@ -138,6 +140,48 @@ export default function Home() {
     }
   }, [selectedNfts, currentUserFid]);
 
+  // Fetch ETH price for currency conversion
+  useEffect(() => {
+    const fetchEthPrice = async () => {
+      try {
+        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+        const data = await res.json();
+        setEthPrice(data.ethereum.usd);
+      } catch (e) {
+        console.error('Failed to fetch ETH price:', e);
+      }
+    };
+    fetchEthPrice();
+    // Refresh every 5 minutes
+    const interval = setInterval(fetchEthPrice, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Convert price between ETH and USDC
+  const getConvertedPrice = () => {
+    if (!ethPrice || !bagPrice || parseFloat(bagPrice) <= 0) return null;
+    const price = parseFloat(bagPrice);
+    if (bagCurrency === 'ETH') {
+      return `≈ $${(price * ethPrice).toFixed(2)} USDC`;
+    } else {
+      return `≈ ${(price / ethPrice).toFixed(6)} ETH`;
+    }
+  };
+
+  // Handle price input - ensure positive values only
+  const handlePriceChange = (value: string) => {
+    // Allow empty string for clearing
+    if (value === '') {
+      setBagPrice('');
+      return;
+    }
+    // Parse and validate
+    const num = parseFloat(value);
+    if (!isNaN(num) && num >= 0) {
+      setBagPrice(value);
+    }
+  };
+
   // Helper functions
   const getNftKey = (nft: NFT, index: number) => `${nft.tokenId}-${nft.collectionName}-${index}`;
   
@@ -189,6 +233,7 @@ export default function Home() {
       sellerFid: currentUserFid,
       sellerPfp: scanResults.pfp,
       price: bagPrice,
+      currency: bagCurrency,
       nfts: selectedNfts,
     };
 
@@ -197,7 +242,8 @@ export default function Home() {
 
     // Build cast text
     const nftCount = selectedNfts.length;
-    const castText = `🛍️ NFT Bundle for Sale!\n\n${nftCount} NFT${nftCount > 1 ? 's' : ''} for ${bagPrice} ETH\n\nCheck it out 👇`;
+    const priceDisplay = bagCurrency === 'USDC' ? `$${bagPrice} USDC` : `${bagPrice} ETH`;
+    const castText = `🛍️ NFT Bundle for Sale!\n\n${nftCount} NFT${nftCount > 1 ? 's' : ''} for ${priceDisplay}\n\nCheck it out 👇`;
 
     try {
       await sdk.actions.composeCast({
@@ -672,15 +718,59 @@ export default function Home() {
 
           {bagNfts.size > 0 && (
             <>
-              <div className="flex gap-2 mb-3">
-                <input
-                  type="number"
-                  placeholder="Bundle price (ETH)"
-                  value={bagPrice}
-                  onChange={(e) => setBagPrice(e.target.value)}
-                  className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder:text-slate-500"
-                />
+              {/* Currency Toggle */}
+              <div className="flex gap-1 mb-3 bg-slate-800 p-1 rounded-lg">
+                <button
+                  onClick={() => setBagCurrency('ETH')}
+                  className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all ${
+                    bagCurrency === 'ETH' 
+                      ? 'bg-green-500 text-white' 
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  ETH
+                </button>
+                <button
+                  onClick={() => setBagCurrency('USDC')}
+                  className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all ${
+                    bagCurrency === 'USDC' 
+                      ? 'bg-blue-500 text-white' 
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  USDC
+                </button>
               </div>
+
+              {/* Price Input */}
+              <div className="mb-3">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      step="0.0001"
+                      min="0.00001"
+                      placeholder={bagCurrency === 'ETH' ? '0.001' : '10.00'}
+                      value={bagPrice}
+                      onChange={(e) => handlePriceChange(e.target.value)}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 pr-16 text-white text-sm placeholder:text-slate-500"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">
+                      {bagCurrency}
+                    </span>
+                  </div>
+                </div>
+                {/* Conversion display */}
+                {getConvertedPrice() && (
+                  <p className="text-slate-500 text-xs mt-1 flex items-center gap-1">
+                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                    {getConvertedPrice()}
+                  </p>
+                )}
+              </div>
+
               <button 
                 onClick={castBag}
                 disabled={!bagPrice || parseFloat(bagPrice) <= 0}
