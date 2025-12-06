@@ -83,6 +83,8 @@ export default function Home() {
   const [gifPreviewIndex, setGifPreviewIndex] = useState(0);
   const [gifSpeed, setGifSpeed] = useState(500); // ms between frames
   const gifPreviewInterval = useRef<NodeJS.Timeout | null>(null);
+  const [generatingGif, setGeneratingGif] = useState(false);
+  const [generatedGif, setGeneratedGif] = useState<string | null>(null); // base64 GIF
 
   // LocalStorage keys
   const getStorageKey = (fid: number) => `hidden-nfts-${fid}`;
@@ -244,6 +246,53 @@ export default function Home() {
       }
     };
   }, [gifNfts.size, gifSpeed]);
+
+  // Generate real GIF server-side
+  const generateRealGif = async () => {
+    if (gifNfts.size < 2 || !scanResults) return;
+    
+    setGeneratingGif(true);
+    setGeneratedGif(null);
+    
+    try {
+      const selectedIndices = Array.from(gifNfts).sort((a, b) => a - b);
+      const imageUrls = selectedIndices.map(i => scanResults.nfts[i].image);
+      
+      const response = await fetch('/api/generate-gif', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageUrls,
+          speed: gifSpeed,
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate GIF');
+      }
+      
+      const data = await response.json();
+      setGeneratedGif(data.gif);
+      
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    } finally {
+      setGeneratingGif(false);
+    }
+  };
+
+  // Download generated GIF
+  const downloadGif = () => {
+    if (!generatedGif) return;
+    
+    const link = document.createElement('a');
+    link.href = `data:image/gif;base64,${generatedGif}`;
+    link.download = 'nft-gif.gif';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // Cast GIF
   const castGif = async () => {
@@ -861,6 +910,69 @@ export default function Home() {
             </div>
           )}
 
+          {/* Generate GIF button */}
+          {gifNfts.size >= 2 && !generatedGif && (
+            <button 
+              onClick={generateRealGif}
+              disabled={generatingGif}
+              className={`w-full py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors mb-3 ${
+                generatingGif
+                  ? 'bg-cyan-500/50 text-white/70 cursor-wait'
+                  : 'bg-cyan-500 hover:bg-cyan-600 text-white'
+              }`}
+            >
+              {generatingGif ? (
+                <>
+                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                  Generating GIF...
+                </>
+              ) : (
+                <>
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Generate Real GIF
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Generated GIF preview & actions */}
+          {generatedGif && (
+            <div className="mb-4">
+              <p className="text-green-400 text-xs uppercase mb-2 flex items-center gap-1">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                GIF Generated!
+              </p>
+              <div className="aspect-square bg-black rounded-lg overflow-hidden border-2 border-green-500/50 mb-3">
+                <img 
+                  src={`data:image/gif;base64,${generatedGif}`}
+                  alt="Generated GIF"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div className="flex gap-2 mb-2">
+                <button 
+                  onClick={downloadGif}
+                  className="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium flex items-center justify-center gap-2"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download GIF
+                </button>
+                <button 
+                  onClick={() => setGeneratedGif(null)}
+                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Action buttons */}
           <div className="flex gap-2">
             <button 
@@ -868,31 +980,36 @@ export default function Home() {
               disabled={gifNfts.size < 2}
               className={`flex-1 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
                 gifNfts.size >= 2
-                  ? 'bg-cyan-500 hover:bg-cyan-600 text-white'
-                  : 'bg-cyan-500/30 text-white/50 cursor-not-allowed'
+                  ? 'bg-purple-500 hover:bg-purple-600 text-white'
+                  : 'bg-purple-500/30 text-white/50 cursor-not-allowed'
               }`}
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-              Cast GIF
+              Cast
             </button>
             <button 
-              disabled={gifNfts.size < 2}
-              className={`px-4 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
-                gifNfts.size >= 2
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
+              disabled={!generatedGif}
+              className={`flex-1 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+                generatedGif
+                  ? 'bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white'
                   : 'bg-slate-700/50 text-white/50 cursor-not-allowed'
               }`}
-              title="Coming soon"
+              title={generatedGif ? "Mint as NFT" : "Generate GIF first"}
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Mint
+              Mint NFT
             </button>
           </div>
-          {gifNfts.size >= 2 && (
+          {!generatedGif && gifNfts.size >= 2 && (
             <p className="text-slate-500 text-xs mt-2 text-center">
-              Mint feature coming soon - create on-chain art from your GIF!
+              Generate GIF first, then mint it as an on-chain NFT
+            </p>
+          )}
+          {generatedGif && (
+            <p className="text-slate-500 text-xs mt-2 text-center">
+              Mint requires IPFS + wallet connection (coming soon)
             </p>
           )}
         </div>
