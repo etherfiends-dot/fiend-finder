@@ -109,7 +109,11 @@ export default function Home() {
   const [mintPrice, setMintPrice] = useState('10000'); // Default 10k tokens
   const [mintStep, setMintStep] = useState<'idle' | 'uploading' | 'signing' | 'done' | 'error'>('idle');
   const [mintError, setMintError] = useState<string | null>(null);
-  const [mintResult, setMintResult] = useState<{ premintUrl?: string; ipfsUrl?: string } | null>(null);
+  const [mintResult, setMintResult] = useState<{ 
+    ipfsUrl?: string; 
+    metadataUrl?: string;
+    zoraUrl?: string;
+  } | null>(null);
 
   // LocalStorage keys
   const getStorageKey = (fid: number) => `hidden-nfts-${fid}`;
@@ -566,8 +570,6 @@ export default function Home() {
   // Execute the action (cast, mint, or sell)
   const executeMint = async () => {
     if (!scanResults || !currentUserFid) return;
-    
-    const wallet = scanResults.wallets?.[0];
 
     try {
       setMintStep('uploading');
@@ -576,6 +578,7 @@ export default function Home() {
       let imageBlob: Blob;
       let filename: string;
       let metadata: Record<string, unknown>;
+      let tokenName: string;
 
       if (mintMode === 'meme' && memeNftIndex !== null) {
         // Generate the meme image with text overlay
@@ -583,8 +586,9 @@ export default function Home() {
         const memeDataUrl = await generateMemeImage(nft.image, memeTopText, memeBottomText);
         imageBlob = base64ToBlob(memeDataUrl, 'image/png');
         filename = `meme-${Date.now()}.png`;
+        tokenName = memeTopText || memeBottomText || 'Meme';
         metadata = {
-          name: `Meme: ${memeTopText || memeBottomText || 'Untitled'}`,
+          name: tokenName,
           description: `A meme created with My Based NFTs by @${scanResults.user}`,
           external_url: 'https://fiend-finder.vercel.app',
           attributes: [
@@ -600,10 +604,11 @@ export default function Home() {
         imageBlob = base64ToBlob(generatedGif, 'image/gif');
         filename = `gif-${Date.now()}.gif`;
         const selectedIndices = Array.from(gifNfts).sort((a, b) => a - b);
+        tokenName = `NFT GIF`;
         metadata = {
-          name: `NFT GIF by @${scanResults.user}`,
-          description: `An animated GIF featuring ${selectedIndices.length} NFTs, created with My Based NFTs`,
-          type: 'gif',
+          name: tokenName,
+          description: `An animated GIF featuring ${selectedIndices.length} NFTs, created with My Based NFTs by @${scanResults.user}`,
+          animation_url: '', // Will be set after upload
           external_url: 'https://fiend-finder.vercel.app',
           attributes: [
             { trait_type: 'Creator', value: scanResults.user },
@@ -638,48 +643,72 @@ export default function Home() {
         throw new Error(uploadResult.error || 'Upload failed');
       }
 
+      const ipfsImageUrl = uploadResult.image.gatewayUrl;
+      const ipfsImageUri = uploadResult.image.ipfsUri;
+      const metadataUri = uploadResult.metadata?.ipfsUri;
+      
+      // Generate Zora create URL with the metadata
+      // Zora's create page can accept an IPFS URI for the media
+      const zoraCreateUrl = `https://zora.co/create/single-edition?media=${encodeURIComponent(ipfsImageUri)}&name=${encodeURIComponent(tokenName)}&chain=8453`;
+      
       setMintStep('done');
-      
-      const ipfsUrl = uploadResult.image.gatewayUrl;
-      const listingResult = {
-        ipfsUrl,
-        premintUrl: ipfsUrl,
-      };
-      
-      setMintResult(listingResult);
-
-      // Generate cast text based on action
-      let castText = '';
-      const contentType = mintMode === 'meme' ? 'meme' : 'GIF';
-      
-      if (mintAction === 'cast') {
-        // Just sharing - no pricing info
-        castText = `Check out this ${contentType} I made with My Based NFTs! 🎨`;
-      } else if (mintAction === 'mint') {
-        // Minting for themselves - link to Zora
-        castText = `I just created a new ${contentType} NFT! 🖼️✨\n\nMint your own at:`;
-      } else if (mintAction === 'sell') {
-        // Selling - include price
-        const priceDisplay = formatPrice(mintPrice, mintCoin.decimals);
-        castText = `🎨 New ${contentType} for sale!\n\n💰 ${priceDisplay} $${mintCoin.symbol}\n🔥 Edition of 100`;
-      }
-      
-      try {
-        if (sdk.actions.composeCast) {
-          await sdk.actions.composeCast({
-            text: castText,
-            embeds: [ipfsUrl],
-          });
-        }
-      } catch (e) {
-        console.log('Cast composer not available:', e);
-      }
+      setMintResult({
+        ipfsUrl: ipfsImageUrl,
+        metadataUrl: metadataUri,
+        zoraUrl: zoraCreateUrl,
+      });
 
     } catch (error) {
       console.error('Action error:', error);
       setMintStep('error');
       setMintError(error instanceof Error ? error.message : 'Failed to complete action');
     }
+  };
+  
+  // Handle the final action after upload is complete
+  const handleFinalAction = async () => {
+    if (!mintResult || !scanResults) return;
+    
+    const contentType = mintMode === 'meme' ? 'meme' : 'GIF';
+    
+    if (mintAction === 'cast') {
+      // Share on Farcaster
+      const castText = `Check out this ${contentType} I made with My Based NFTs! 🎨`;
+      try {
+        if (sdk.actions.composeCast) {
+          await sdk.actions.composeCast({
+            text: castText,
+            embeds: [mintResult.ipfsUrl || ''],
+          });
+        }
+      } catch (e) {
+        // Fallback to clipboard
+        await navigator.clipboard.writeText(`${castText}\n\n${mintResult.ipfsUrl}`);
+        alert('Copied to clipboard!');
+      }
+    } else if (mintAction === 'mint') {
+      // Open Zora create page
+      if (mintResult.zoraUrl) {
+        window.open(mintResult.zoraUrl, '_blank');
+      }
+    } else if (mintAction === 'sell') {
+      // Share listing on Farcaster
+      const priceDisplay = formatPrice(mintPrice, mintCoin.decimals);
+      const castText = `🎨 New ${contentType} for sale!\n\n💰 ${priceDisplay} $${mintCoin.symbol}\n🔥 Open edition`;
+      try {
+        if (sdk.actions.composeCast) {
+          await sdk.actions.composeCast({
+            text: castText,
+            embeds: [mintResult.ipfsUrl || ''],
+          });
+        }
+      } catch (e) {
+        await navigator.clipboard.writeText(`${castText}\n\n${mintResult.ipfsUrl}`);
+        alert('Copied to clipboard!');
+      }
+    }
+    
+    cancelMint();
   };
 
   // Cast triptych
@@ -1527,12 +1556,12 @@ export default function Home() {
                           <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                         </svg>
                       </div>
-                      <div className="flex-1">
+                <div className="flex-1">
                         <p className="font-semibold text-white">Cast / Share</p>
                         <p className="text-slate-400 text-sm">Share freely on Farcaster</p>
-                      </div>
+                </div>
                       <span className="text-green-400 text-sm font-medium">FREE</span>
-                    </div>
+                </div>
                   </button>
 
                   {/* Mint option */}
@@ -1551,11 +1580,11 @@ export default function Home() {
                         <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
-                      </div>
+              </div>
                       <div className="flex-1">
                         <p className="font-semibold text-white">Mint NFT</p>
                         <p className="text-slate-400 text-sm">Own it on-chain forever</p>
-                      </div>
+            </div>
                       <span className="text-slate-400 text-sm">+ gas</span>
                     </div>
                   </button>
@@ -1618,30 +1647,57 @@ export default function Home() {
 
               {/* Success state */}
               {mintStep === 'done' && mintResult && (
-                <div className="bg-green-900/30 border border-green-500/50 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <p className="text-green-400 font-bold">
-                      {mintAction === 'cast' ? 'Ready to share!' : mintAction === 'mint' ? 'Minted!' : 'Listed for sale!'}
+                <div className="space-y-4">
+                  <div className="bg-green-900/30 border border-green-500/50 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <p className="text-green-400 font-bold">Uploaded to IPFS!</p>
+                    </div>
+                    <p className="text-slate-300 text-sm">
+                      Your {mintMode} is permanently stored and ready.
                     </p>
                   </div>
-                  <p className="text-slate-300 text-sm mb-3">
-                    {mintAction === 'sell' 
-                      ? `Your ${mintMode} is available for ${formatPrice(mintPrice, mintCoin.decimals)} $${mintCoin.symbol}`
-                      : `Your ${mintMode} has been uploaded to IPFS`
-                    }
-                  </p>
+                  
+                  {/* Preview the uploaded content */}
                   {mintResult.ipfsUrl && (
-                    <a 
-                      href={mintResult.ipfsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-400 hover:text-blue-300 text-sm underline"
-                    >
-                      View on IPFS →
-                    </a>
+                    <div className="aspect-video bg-black rounded-xl overflow-hidden border border-slate-700">
+                      <img 
+                        src={mintResult.ipfsUrl} 
+                        alt="Your creation" 
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Action-specific content */}
+                  {mintAction === 'cast' && (
+                    <p className="text-slate-400 text-sm text-center">
+                      Share your creation on Farcaster!
+                    </p>
+                  )}
+                  
+                  {mintAction === 'mint' && (
+                    <div className="bg-cyan-900/20 border border-cyan-500/30 rounded-xl p-3">
+                      <p className="text-cyan-300 text-sm mb-2">
+                        <strong>Ready to mint!</strong> Click below to create your NFT on Zora.
+                      </p>
+                      <p className="text-slate-400 text-xs">
+                        You'll pay a small gas fee (~$0.10) to mint on Base.
+                      </p>
+                  </div>
+                  )}
+                  
+                  {mintAction === 'sell' && (
+                    <div className="bg-orange-900/20 border border-orange-500/30 rounded-xl p-3">
+                      <p className="text-orange-300 text-sm">
+                        <strong>Price:</strong> {formatPrice(mintPrice, mintCoin.decimals)} ${mintCoin.symbol}
+                      </p>
+                      <p className="text-slate-400 text-xs mt-1">
+                        Share your listing on Farcaster to find buyers.
+                      </p>
+              </div>
                   )}
                 </div>
               )}
@@ -1666,14 +1722,52 @@ export default function Home() {
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-slate-700">
+            <div className="p-4 border-t border-slate-700 space-y-2">
               {mintStep === 'done' ? (
-                <button 
-                  onClick={cancelMint}
-                  className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-medium transition-colors"
-                >
-                  Done
-                </button>
+                <>
+                  {/* Action button based on selected action */}
+                  <button 
+                    onClick={handleFinalAction}
+                    className={`w-full py-3.5 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
+                      mintAction === 'cast'
+                        ? 'bg-purple-500 hover:bg-purple-600 text-white'
+                        : mintAction === 'mint'
+                          ? 'bg-cyan-500 hover:bg-cyan-600 text-white'
+                          : 'bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white'
+                    }`}
+                  >
+                    {mintAction === 'cast' ? (
+                      <>
+                        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                        </svg>
+                        Cast to Farcaster
+                      </>
+                    ) : mintAction === 'mint' ? (
+                      <>
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Mint on Zora (pays gas)
+                      </>
+                    ) : (
+                      <>
+                        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                        </svg>
+                        Share Listing
+                      </>
+                    )}
+                  </button>
+                  
+                  {/* Close button */}
+                  <button 
+                    onClick={cancelMint}
+                    className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-medium transition-colors text-sm"
+                  >
+                    Close
+                  </button>
+                </>
               ) : (
                 <button 
                   onClick={executeMint}
@@ -1691,36 +1785,22 @@ export default function Home() {
                   {mintStep === 'uploading' || mintStep === 'signing' ? (
                     <>
                       <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
-                      Processing...
-                    </>
-                  ) : mintAction === 'cast' ? (
-                    <>
-                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                  </svg>
-                      Cast to Farcaster
-                    </>
-                  ) : mintAction === 'mint' ? (
-                    <>
-                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      Mint NFT
+                      Uploading to IPFS...
                     </>
                   ) : (
                     <>
                       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                       </svg>
-                      Create Listing
+                      Upload to IPFS
                     </>
                   )}
                 </button>
               )}
-                </div>
+            </div>
           </div>
-              </div>
-            )}
+        </div>
+      )}
 
       {/* Fullscreen Slideshow Overlay */}
       {slideshowActive && scanResults && (

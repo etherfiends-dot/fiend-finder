@@ -6,7 +6,7 @@
  * Full Zora SDK integration requires additional wallet/signing setup.
  */
 
-// Popular memecoins on Base
+// Default tokens shown in selector (others searchable via DexScreener)
 export const MEMECOINS = [
   {
     symbol: "ETH",
@@ -21,34 +21,6 @@ export const MEMECOINS = [
     address: "0x4ed4E862860beD51a9570b96d89aF5E1B0Efefed",
     decimals: 18,
     logo: "https://assets.coingecko.com/coins/images/34515/small/android-chrome-512x512.png",
-  },
-  {
-    symbol: "HIGHER",
-    name: "Higher",
-    address: "0x0578d8A44db98B23BF096A382e016e29a5Ce0ffe",
-    decimals: 18,
-    logo: "https://assets.coingecko.com/coins/images/36084/small/200x200.png",
-  },
-  {
-    symbol: "TOSHI",
-    name: "Toshi",
-    address: "0xAC1Bd2486aAf3B5C0fc3Fd868558b082a531B2B4",
-    decimals: 18,
-    logo: "https://assets.coingecko.com/coins/images/31126/small/toshi.png",
-  },
-  {
-    symbol: "BRETT",
-    name: "Brett",
-    address: "0x532f27101965dd16442E59d40670FaF5eBB142E4",
-    decimals: 18,
-    logo: "https://assets.coingecko.com/coins/images/35529/small/1000050750.png",
-  },
-  {
-    symbol: "CLANKER",
-    name: "Clanker",
-    address: "0x1bc0c42215582d5A085795f3EE0e52a4F6893210",
-    decimals: 18,
-    logo: "https://assets.coingecko.com/coins/images/51880/small/clanker.jpg",
   },
   {
     symbol: "USDC",
