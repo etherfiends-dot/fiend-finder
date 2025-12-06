@@ -185,9 +185,9 @@ export default function Home() {
 
     // Create bundle data for URL
     const bundleData = {
-      seller: scanResults.username,
+      seller: scanResults.user,
       sellerFid: currentUserFid,
-      sellerPfp: scanResults.pfpUrl,
+      sellerPfp: scanResults.pfp,
       price: bagPrice,
       nfts: selectedNfts,
     };
