@@ -1151,6 +1151,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
               poster="/fiends/ape.jpg"
               style={{ maxHeight: 220 }}
             >
+              <source src="/fiends/fiend-loop.mp4" type="video/mp4" />
               <source src="/fiends/Ape_s_Shocking_NFT_Declaration.mp4" type="video/mp4" />
               Your browser does not support the video tag.
             </video>
@@ -1703,7 +1704,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
       'linear-gradient(135deg, rgba(12,10,20,0.9) 0%, rgba(12,10,20,0.8) 40%, rgba(12,10,20,0.75) 100%)',
     // Use your dropped asset as the hero background
     heroImage:
-      "url('/fiends/NFT.jpg')",
+      "url('/fiends/warplet-jacket.png')",
   };
 
   return (
