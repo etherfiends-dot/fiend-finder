@@ -1128,6 +1128,32 @@ const [templateError, setTemplateError] = useState<string | null>(null);
     
     return (
       <div className="space-y-6">
+        {/* Fiends Feature Clip */}
+        <div className="bg-[rgba(12,10,20,0.65)] p-4 rounded-xl border border-[#8C52FF]/40 shadow-[0_14px_40px_rgba(0,0,0,0.35)] backdrop-blur space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-full overflow-hidden border border-[#E53935]/60">
+              <img src="/fiends/ape.jpg" alt="Fiend feature" className="w-full h-full object-cover" />
+            </div>
+            <div>
+              <h3 className="font-bold text-white">Fiend Feature</h3>
+              <p className="text-xs text-slate-400">Short loop from your collection</p>
+            </div>
+          </div>
+          <div className="relative rounded-lg overflow-hidden border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
+            <video
+              src="/fiends/Ape_s_Shocking_NFT_Declaration.mp4"
+              poster="/fiends/ape.jpg"
+              className="w-full h-full object-cover"
+              muted
+              playsInline
+              autoPlay
+              loop
+              controls
+              style={{ maxHeight: 220 }}
+            />
+          </div>
+        </div>
+
         {/* Meme Generator */}
             <div className="bg-[rgba(12,10,20,0.65)] p-4 rounded-xl border border-[#8C52FF]/40 shadow-[0_14px_40px_rgba(0,0,0,0.35)] backdrop-blur">
           <div className="flex items-center gap-2 mb-2">
@@ -1672,8 +1698,9 @@ const [templateError, setTemplateError] = useState<string | null>(null);
     glow: '0 20px 60px rgba(140, 82, 255, 0.25)',
     heroOverlay:
       'linear-gradient(135deg, rgba(12,10,20,0.9) 0%, rgba(12,10,20,0.8) 40%, rgba(12,10,20,0.75) 100%)',
+    // Use your dropped asset as the hero background
     heroImage:
-      "url('/fiends/fiend-collage.png')",
+      "url('/fiends/NFT.jpg')",
   };
 
   return (
