@@ -77,6 +77,12 @@ export default function Home() {
   const [slideshowActive, setSlideshowActive] = useState(false);
   const [slideshowIndex, setSlideshowIndex] = useState(0);
   const slideshowInterval = useRef<NodeJS.Timeout | null>(null);
+  
+  // GIF Creator state
+  const [gifNfts, setGifNfts] = useState<Set<number>>(new Set());
+  const [gifPreviewIndex, setGifPreviewIndex] = useState(0);
+  const [gifSpeed, setGifSpeed] = useState(500); // ms between frames
+  const gifPreviewInterval = useRef<NodeJS.Timeout | null>(null);
 
   // LocalStorage keys
   const getStorageKey = (fid: number) => `hidden-nfts-${fid}`;
@@ -201,8 +207,76 @@ export default function Home() {
       if (slideshowInterval.current) {
         clearInterval(slideshowInterval.current);
       }
+      if (gifPreviewInterval.current) {
+        clearInterval(gifPreviewInterval.current);
+      }
     };
   }, []);
+
+  // GIF Creator functions
+  const toggleGifNft = (index: number) => {
+    setGifNfts(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else if (next.size < 10) {
+        next.add(index);
+      }
+      return next;
+    });
+  };
+
+  // Start GIF preview animation
+  useEffect(() => {
+    if (gifNfts.size >= 2) {
+      gifPreviewInterval.current = setInterval(() => {
+        setGifPreviewIndex(prev => (prev + 1) % gifNfts.size);
+      }, gifSpeed);
+    } else {
+      if (gifPreviewInterval.current) {
+        clearInterval(gifPreviewInterval.current);
+        gifPreviewInterval.current = null;
+      }
+    }
+    return () => {
+      if (gifPreviewInterval.current) {
+        clearInterval(gifPreviewInterval.current);
+      }
+    };
+  }, [gifNfts.size, gifSpeed]);
+
+  // Cast GIF
+  const castGif = async () => {
+    if (gifNfts.size < 2 || !scanResults || !currentUserFid) return;
+    
+    const selectedIndices = Array.from(gifNfts).sort((a, b) => a - b);
+    const gifData = selectedIndices.map(i => ({
+      image: scanResults.nfts[i].image,
+      name: scanResults.nfts[i].name,
+    }));
+    
+    const encoded = btoa(JSON.stringify({
+      frames: gifData,
+      speed: gifSpeed,
+      user: scanResults.user,
+      displayName: scanResults.displayName,
+    }));
+    
+    const gifUrl = `${window.location.origin}/gif?data=${encoded}`;
+    const castText = `Check out my NFT GIF! 🎬`;
+    
+    try {
+      if (sdk.actions.composeCast) {
+        await sdk.actions.composeCast({ text: castText, embeds: [gifUrl] });
+      } else {
+        const composeUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(castText)}&embeds[]=${encodeURIComponent(gifUrl)}`;
+        await sdk.actions.openUrl(composeUrl);
+      }
+    } catch {
+      await navigator.clipboard.writeText(`${castText}\n\n${gifUrl}`);
+      alert('GIF link copied to clipboard!');
+    }
+  };
 
   // Cast meme
   const castMeme = async () => {
@@ -690,6 +764,137 @@ export default function Home() {
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
             Cast Meme
           </button>
+        </div>
+
+        {/* GIF Creator */}
+        <div className="bg-gradient-to-br from-cyan-900/20 to-slate-900 p-4 rounded-xl border border-cyan-500/30">
+          <div className="flex items-center gap-2 mb-2">
+            <svg className="h-5 w-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2m0 2v2m0-2h2m8 0h2m-2 0V2m0 2v2M3 20h18V8H3v12zm4-8h10m-10 4h4" />
+            </svg>
+            <h3 className="font-bold text-white">GIF Creator</h3>
+          </div>
+          <p className="text-slate-400 text-sm mb-4">Select 2-10 NFTs to create an animated GIF</p>
+          
+          {/* Selection counter */}
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-slate-400 text-sm">
+              Selected: <span className={`font-bold ${gifNfts.size >= 2 ? 'text-cyan-400' : 'text-red-400'}`}>{gifNfts.size}/10</span>
+              {gifNfts.size < 2 && <span className="text-red-400 text-xs ml-2">(min 2)</span>}
+            </span>
+            {gifNfts.size > 0 && (
+              <button 
+                onClick={() => setGifNfts(new Set())}
+                className="text-slate-500 hover:text-red-400 text-xs underline"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          {/* NFT selector grid */}
+          <div className="grid grid-cols-5 gap-2 mb-4">
+            {scanResults.nfts.slice(0, 15).map((nft, i) => {
+              const isSelected = gifNfts.has(i);
+              const selectionOrder = isSelected ? Array.from(gifNfts).sort((a, b) => a - b).indexOf(i) + 1 : null;
+              return (
+                <button 
+                  key={i} 
+                  onClick={() => toggleGifNft(i)}
+                  disabled={gifNfts.size >= 10 && !isSelected}
+                  className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                    isSelected ? 'border-cyan-500 ring-2 ring-cyan-500/50' : 'border-slate-700 hover:border-cyan-500/50'
+                  } ${gifNfts.size >= 10 && !isSelected ? 'opacity-30' : ''}`}
+                >
+                  <img src={nft.image} alt={nft.name} className="w-full h-full object-cover" />
+                  {isSelected && selectionOrder && (
+                    <div className="absolute top-0 right-0 w-5 h-5 bg-cyan-500 rounded-bl-lg flex items-center justify-center">
+                      <span className="text-black text-xs font-bold">{selectionOrder}</span>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* GIF Preview */}
+          {gifNfts.size >= 2 && (
+            <div className="mb-4">
+              <p className="text-slate-500 text-xs uppercase mb-2">Preview</p>
+              <div className="aspect-square bg-black rounded-lg overflow-hidden border border-cyan-500/30">
+                {(() => {
+                  const selectedIndices = Array.from(gifNfts).sort((a, b) => a - b);
+                  const currentIndex = selectedIndices[gifPreviewIndex % selectedIndices.length];
+                  const currentNft = scanResults.nfts[currentIndex];
+                  return currentNft ? (
+                    <img 
+                      src={currentNft.image} 
+                      alt={currentNft.name} 
+                      className="w-full h-full object-contain"
+                    />
+                  ) : null;
+                })()}
+              </div>
+            </div>
+          )}
+
+          {/* Speed control */}
+          {gifNfts.size >= 2 && (
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-slate-400 text-sm">Speed</span>
+                <span className="text-cyan-400 text-sm">{gifSpeed}ms</span>
+              </div>
+              <input
+                type="range"
+                min="200"
+                max="2000"
+                step="100"
+                value={gifSpeed}
+                onChange={(e) => setGifSpeed(Number(e.target.value))}
+                className="w-full accent-cyan-500"
+              />
+              <div className="flex justify-between text-xs text-slate-500 mt-1">
+                <span>Fast</span>
+                <span>Slow</span>
+              </div>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex gap-2">
+            <button 
+              onClick={castGif}
+              disabled={gifNfts.size < 2}
+              className={`flex-1 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+                gifNfts.size >= 2
+                  ? 'bg-cyan-500 hover:bg-cyan-600 text-white'
+                  : 'bg-cyan-500/30 text-white/50 cursor-not-allowed'
+              }`}
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              Cast GIF
+            </button>
+            <button 
+              disabled={gifNfts.size < 2}
+              className={`px-4 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+                gifNfts.size >= 2
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
+                  : 'bg-slate-700/50 text-white/50 cursor-not-allowed'
+              }`}
+              title="Coming soon"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Mint
+            </button>
+          </div>
+          {gifNfts.size >= 2 && (
+            <p className="text-slate-500 text-xs mt-2 text-center">
+              Mint feature coming soon - create on-chain art from your GIF!
+            </p>
+          )}
         </div>
       </div>
     );
