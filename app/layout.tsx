@@ -16,10 +16,10 @@ const appUrl = process.env.NEXT_PUBLIC_URL || "https://fiend-finder.vercel.app";
 const cacheBuster = `v=${Date.now()}`;
 
 export const metadata: Metadata = {
-  title: "Your Base NFTs",
+  title: "Your Based NFTs",
   description: "View your NFT collection on Base",
   openGraph: {
-    title: "Your Base NFTs",
+    title: "Your Based NFTs",
     description: "View your NFT collection on Base",
     images: [`${appUrl}/og-image.png?${cacheBuster}`],
   },

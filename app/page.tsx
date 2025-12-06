@@ -29,6 +29,24 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasAutoScanned = useRef(false);
+  const [hiddenNfts, setHiddenNfts] = useState<Set<string>>(new Set());
+  const [showHidden, setShowHidden] = useState(false);
+
+  // Generate unique key for NFT
+  const getNftKey = (nft: NFT, index: number) => `${nft.tokenId}-${nft.collectionName}-${index}`;
+
+  // Toggle hide/show for an NFT
+  const toggleHideNft = (key: string) => {
+    setHiddenNfts(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
 
   // Scan by FID
   const scanByFid = useCallback(async (fid: number) => {
@@ -90,7 +108,7 @@ export default function Home() {
         {/* Header */}
         <div className="text-center mb-6 pt-4">
           <h1 className="text-3xl font-black bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-transparent tracking-tighter">
-            Your Base NFTs
+            Your Based NFTs
           </h1>
         </div>
 
@@ -150,37 +168,127 @@ export default function Home() {
             </div>
 
             {/* NFT Gallery */}
-            {scanResults.nfts.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3">
-                {scanResults.nfts.map((nft, i) => (
-                  <div 
-                    key={`${nft.tokenId}-${i}`}
-                    className="group relative aspect-square bg-slate-900 rounded-xl overflow-hidden border border-slate-800 hover:border-purple-500 transition-colors"
-                  >
-                    <img 
-                      src={nft.image} 
-                      alt={nft.name} 
-                      className="w-full h-full object-cover"
-                    />
-                    {/* Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent flex flex-col justify-end p-3">
-                      <p className="font-bold text-white text-xs truncate">{nft.name}</p>
-                      <p className="text-slate-400 text-[10px] truncate">{nft.collectionName}</p>
+            {(() => {
+              const visibleNfts = scanResults.nfts.filter((nft, i) => !hiddenNfts.has(getNftKey(nft, i)));
+              const hiddenNftsList = scanResults.nfts.filter((nft, i) => hiddenNfts.has(getNftKey(nft, i)));
+              
+              return (
+                <>
+                  {visibleNfts.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      {scanResults.nfts.map((nft, i) => {
+                        const key = getNftKey(nft, i);
+                        if (hiddenNfts.has(key)) return null;
+                        return (
+                          <div 
+                            key={key}
+                            className="group relative aspect-square bg-slate-900 rounded-xl overflow-hidden border border-slate-800 hover:border-purple-500 transition-colors"
+                          >
+                            <img 
+                              src={nft.image} 
+                              alt={nft.name} 
+                              className="w-full h-full object-cover"
+                            />
+                            {/* Hide Button */}
+                            <button
+                              onClick={() => toggleHideNft(key)}
+                              className="absolute top-2 right-2 w-7 h-7 bg-black/60 hover:bg-red-500/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                              title="Hide NFT"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                              </svg>
+                            </button>
+                            {/* Overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent flex flex-col justify-end p-3 pointer-events-none">
+                              <p className="font-bold text-white text-xs truncate">{nft.name}</p>
+                              <p className="text-slate-400 text-[10px] truncate">{nft.collectionName}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 bg-slate-900/50 rounded-xl border border-slate-800">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-800 flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <p className="text-slate-400">No NFTs found on Base</p>
-                <p className="text-slate-500 text-sm mt-1">Start collecting to see them here!</p>
-              </div>
-            )}
+                  ) : hiddenNftsList.length > 0 ? (
+                    <div className="text-center py-8 bg-slate-900/50 rounded-xl border border-slate-800">
+                      <p className="text-slate-400">All NFTs are hidden</p>
+                      <p className="text-slate-500 text-sm mt-1">Expand the hidden section below to view them</p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 bg-slate-900/50 rounded-xl border border-slate-800">
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-800 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <p className="text-slate-400">No NFTs found on Base</p>
+                      <p className="text-slate-500 text-sm mt-1">Start collecting to see them here!</p>
+                    </div>
+                  )}
+
+                  {/* Hidden NFTs Dropdown */}
+                  {hiddenNftsList.length > 0 && (
+                    <div className="mt-4">
+                      <button
+                        onClick={() => setShowHidden(!showHidden)}
+                        className="w-full flex items-center justify-between p-3 bg-slate-900/80 hover:bg-slate-800/80 border border-slate-700 rounded-xl transition-colors"
+                      >
+                        <span className="text-slate-400 text-sm font-medium flex items-center gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                          </svg>
+                          Hidden NFTs ({hiddenNftsList.length})
+                        </span>
+                        <svg 
+                          xmlns="http://www.w3.org/2000/svg" 
+                          className={`h-5 w-5 text-slate-400 transition-transform ${showHidden ? 'rotate-180' : ''}`} 
+                          fill="none" 
+                          viewBox="0 0 24 24" 
+                          stroke="currentColor"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      
+                      {showHidden && (
+                        <div className="mt-3 grid grid-cols-3 gap-2">
+                          {scanResults.nfts.map((nft, i) => {
+                            const key = getNftKey(nft, i);
+                            if (!hiddenNfts.has(key)) return null;
+                            return (
+                              <div 
+                                key={key}
+                                className="group relative aspect-square bg-slate-900 rounded-lg overflow-hidden border border-slate-700 opacity-60 hover:opacity-100 transition-opacity"
+                              >
+                                <img 
+                                  src={nft.image} 
+                                  alt={nft.name} 
+                                  className="w-full h-full object-cover"
+                                />
+                                {/* Unhide Button */}
+                                <button
+                                  onClick={() => toggleHideNft(key)}
+                                  className="absolute top-1 right-1 w-6 h-6 bg-black/60 hover:bg-green-500/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                                  title="Show NFT"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                </button>
+                                {/* Name overlay */}
+                                <div className="absolute bottom-0 left-0 right-0 bg-black/80 p-1">
+                                  <p className="text-white text-[9px] truncate text-center">{nft.name}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
       </div>
