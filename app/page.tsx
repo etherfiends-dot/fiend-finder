@@ -9,7 +9,9 @@ type NFT = {
   name: string;
   image: string;
   collectionName: string;
+  contractAddress: string;
   isCustody: boolean;
+  floorPrice: number;
 };
 
 type ScanResult = {
@@ -19,6 +21,7 @@ type ScanResult = {
   pfp: string;
   walletCount: number;
   totalFound: number;
+  totalValueEth: number;
   nfts: NFT[];
 };
 
@@ -197,6 +200,19 @@ export default function Home() {
                   <p className="text-slate-400 text-xs uppercase">NFTs</p>
                 </div>
               </div>
+              
+              {/* Portfolio Value */}
+              {scanResults.totalValueEth > 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-700/50">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400 text-sm">Portfolio Value</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl font-bold text-white">{scanResults.totalValueEth.toFixed(4)}</span>
+                      <span className="text-slate-400 text-sm">ETH</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* NFT Gallery */}
@@ -231,6 +247,12 @@ export default function Home() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                               </svg>
                             </button>
+                            {/* Floor Price Badge */}
+                            {nft.floorPrice > 0 && (
+                              <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm px-2 py-1 rounded-lg">
+                                <span className="text-[10px] font-medium text-white">{nft.floorPrice.toFixed(4)} ETH</span>
+                              </div>
+                            )}
                             {/* Overlay */}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent flex flex-col justify-end p-3 pointer-events-none">
                               <p className="font-bold text-white text-xs truncate">{nft.name}</p>

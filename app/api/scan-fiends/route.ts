@@ -9,6 +9,7 @@ const alchemy = new Alchemy({
 
 // ---------------------------------------------------------
 // CACHING - Store results for 5 minutes to reduce API calls
+// Floor prices cached for 15 minutes (change less frequently)
 // ---------------------------------------------------------
 type CacheEntry = {
   data: any;
@@ -17,6 +18,9 @@ type CacheEntry = {
 
 const cache = new Map<string, CacheEntry>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const FLOOR_PRICE_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+
+const floorPriceCache = new Map<string, CacheEntry>();
 
 function getFromCache(key: string): any | null {
   const entry = cache.get(key);
@@ -41,6 +45,48 @@ function setCache(key: string, data: any): void {
         cache.delete(k);
       }
     }
+  }
+}
+
+function getFloorPriceFromCache(contractAddress: string): number | null {
+  const entry = floorPriceCache.get(contractAddress.toLowerCase());
+  if (!entry) return null;
+  
+  if (Date.now() - entry.timestamp > FLOOR_PRICE_CACHE_TTL) {
+    floorPriceCache.delete(contractAddress.toLowerCase());
+    return null;
+  }
+  
+  return entry.data;
+}
+
+function setFloorPriceCache(contractAddress: string, price: number): void {
+  floorPriceCache.set(contractAddress.toLowerCase(), { data: price, timestamp: Date.now() });
+}
+
+// Fetch floor price for a contract
+async function fetchFloorPrice(contractAddress: string): Promise<number> {
+  // Check cache first
+  const cached = getFloorPriceFromCache(contractAddress);
+  if (cached !== null) return cached;
+  
+  try {
+    const floorPrice = await alchemy.nft.getFloorPrice(contractAddress);
+    
+    // Try OpenSea first, then LooksRare
+    let price = 0;
+    if (floorPrice.openSea?.floorPrice) {
+      price = floorPrice.openSea.floorPrice;
+    } else if (floorPrice.looksRare?.floorPrice) {
+      price = floorPrice.looksRare.floorPrice;
+    }
+    
+    setFloorPriceCache(contractAddress, price);
+    return price;
+  } catch (err) {
+    console.error(`Error fetching floor price for ${contractAddress}:`, err);
+    setFloorPriceCache(contractAddress, 0);
+    return 0;
   }
 }
 
@@ -103,6 +149,7 @@ export async function GET(req: NextRequest) {
     // STEP 2: Scan Wallets for NFTs on Base
     // ---------------------------------------------------------
     let allNfts: any[] = [];
+    const contractAddresses = new Set<string>();
 
     await Promise.all(
       uniqueWallets.map(async (walletAddress) => {
@@ -120,12 +167,15 @@ export async function GET(req: NextRequest) {
               nft.raw?.metadata?.image;
 
             if (imageUrl) {
+              contractAddresses.add(nft.contract.address);
               allNfts.push({
                 tokenId: nft.tokenId,
                 name: nft.name || nft.contract.name || `Token #${nft.tokenId}`,
                 image: imageUrl,
                 collectionName: nft.contract.name || "Unknown Collection",
+                contractAddress: nft.contract.address,
                 isCustody: walletAddress === user.custody_address,
+                floorPrice: 0, // Will be filled in below
               });
             }
           });
@@ -135,6 +185,29 @@ export async function GET(req: NextRequest) {
       })
     );
 
+    // ---------------------------------------------------------
+    // STEP 3: Fetch Floor Prices for each collection
+    // ---------------------------------------------------------
+    const floorPrices = new Map<string, number>();
+    
+    await Promise.all(
+      Array.from(contractAddresses).map(async (contractAddress) => {
+        const price = await fetchFloorPrice(contractAddress);
+        floorPrices.set(contractAddress.toLowerCase(), price);
+      })
+    );
+
+    // Add floor prices to NFTs and calculate total value
+    let totalValueEth = 0;
+    allNfts = allNfts.map((nft) => {
+      const floorPrice = floorPrices.get(nft.contractAddress.toLowerCase()) || 0;
+      totalValueEth += floorPrice;
+      return {
+        ...nft,
+        floorPrice,
+      };
+    });
+
     const result = {
       user: user.username,
       fid: user.fid,
@@ -142,6 +215,7 @@ export async function GET(req: NextRequest) {
       pfp: user.pfp_url,
       walletCount: uniqueWallets.length,
       totalFound: allNfts.length,
+      totalValueEth: Math.round(totalValueEth * 10000) / 10000, // Round to 4 decimals
       nfts: allNfts,
     };
 
