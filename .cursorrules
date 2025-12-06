@@ -30,3 +30,19 @@
 
    - Handle `sdk.context` to get the user's FID and wallet address.
 
+## Testing Environment Guidelines
+1. **Localhost is Invalid:** Always assume the user cannot test Frames on `http://localhost:3000`. 
+2. **Tunneling is Required:** If the user asks to "test" or "preview," remind them to ensure their ngrok/tunnel is active and pointing to the correct port.
+3. **Debugger Tool:** When debugging layout or button issues, always suggest using the Warpcast Frame Developer Playground: https://warpcast.com/~/developers/frames
+
+## Common Frame Pitfalls (Check these before generating code)
+* **Image Ratio:** Frame images must be 1.91:1 (approx 1200x630px).
+* **State Limit:** Frame state cannot exceed 4kb.
+* **Buttons:** A frame can have a maximum of 4 buttons.
+* **Post URLs:** Ensure the `post_url` in button actions points to the tunneling URL, not localhost.
+
+## Debugging Workflow
+If I say "it's not working":
+1. Ask if the meta tags are rendering in the browser source code.
+2. Ask if the ngrok URL has been whitelisted or is fresh.
+3. Check if the Frame Signature is failing validation (common in local dev).

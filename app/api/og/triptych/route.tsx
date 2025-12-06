@@ -28,7 +28,12 @@ export async function GET(req: NextRequest) {
 
     const triptychData = JSON.parse(atob(decodeURIComponent(data)));
     const { user, displayName, pfp, nfts } = triptychData;
-    const username = user; // Cast sends 'user' field
+    const username = user;
+
+    // Extract individual NFTs (can't use .map in @vercel/og)
+    const nft1 = nfts?.[0] || { image: '', name: 'NFT 1', collection: '' };
+    const nft2 = nfts?.[1] || { image: '', name: 'NFT 2', collection: '' };
+    const nft3 = nfts?.[2] || { image: '', name: 'NFT 3', collection: '' };
 
     return new ImageResponse(
       (
@@ -39,103 +44,201 @@ export async function GET(req: NextRequest) {
             width: '100%',
             height: '100%',
             background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)',
-            padding: 50,
+            padding: 40,
           }}
         >
           {/* Header with user info */}
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 30 }}>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24 }}>
             {pfp && (
               <img
                 src={pfp}
+                width={56}
+                height={56}
                 style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 32,
+                  borderRadius: 28,
                   marginRight: 16,
                   border: '3px solid #a855f7',
                 }}
               />
             )}
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ color: 'white', fontSize: 28, fontWeight: 'bold' }}>
-                {displayName || username}'s Top 3
+              <span style={{ color: 'white', fontSize: 26, fontWeight: 'bold' }}>
+                {displayName || username}&apos;s Top 3
               </span>
-              <span style={{ color: '#a855f7', fontSize: 20 }}>@{username}</span>
+              <span style={{ color: '#a855f7', fontSize: 18 }}>@{username}</span>
             </div>
             <div style={{
               display: 'flex',
               marginLeft: 'auto',
               alignItems: 'center',
-              backgroundColor: '#a855f720',
-              padding: '12px 24px',
+              backgroundColor: 'rgba(168, 85, 247, 0.2)',
+              padding: '10px 20px',
               borderRadius: 50,
             }}>
-              <span style={{ color: '#a855f7', fontSize: 24 }}>⭐ Top 3 NFTs</span>
+              <span style={{ color: '#a855f7', fontSize: 22 }}>⭐ Top 3 NFTs</span>
             </div>
           </div>
 
-          {/* NFT Triptych */}
-          <div style={{ display: 'flex', flex: 1, gap: 24, alignItems: 'stretch' }}>
-            {nfts?.slice(0, 3).map((nft: { image: string; name: string; collection: string }, i: number) => (
-              <div
-                key={i}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  flex: 1,
-                  backgroundColor: '#1e293b',
-                  borderRadius: 24,
-                  overflow: 'hidden',
-                  border: i === 1 ? '4px solid #a855f7' : '2px solid #334155',
-                  transform: i === 1 ? 'scale(1.05)' : 'scale(1)',
-                }}
-              >
+          {/* NFT Triptych - 3 cards side by side */}
+          <div style={{ display: 'flex', flex: 1, gap: 20 }}>
+            {/* NFT 1 */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                flex: 1,
+                backgroundColor: '#1e293b',
+                borderRadius: 20,
+                overflow: 'hidden',
+                border: '2px solid #334155',
+                position: 'relative',
+              }}
+            >
+              {nft1.image && (
                 <img
-                  src={nft.image}
-                  style={{
-                    width: '100%',
-                    flex: 1,
-                    objectFit: 'cover',
-                  }}
+                  src={nft1.image}
+                  width={350}
+                  height={320}
+                  style={{ objectFit: 'cover' }}
                 />
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  padding: 16,
-                  backgroundColor: '#0f172a',
-                }}>
-                  <span style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
-                    {nft.name?.slice(0, 25) || 'NFT'}
-                  </span>
-                  <span style={{ color: '#64748b', fontSize: 14 }}>
-                    {nft.collection?.slice(0, 30) || ''}
-                  </span>
-                </div>
-                {/* Rank badge */}
-                <div style={{
-                  position: 'absolute',
-                  top: 16,
-                  left: 16,
-                  backgroundColor: i === 0 ? '#fbbf24' : i === 1 ? '#a855f7' : '#6b7280',
-                  color: i === 0 ? 'black' : 'white',
-                  padding: '8px 16px',
-                  borderRadius: 20,
-                  fontSize: 16,
-                  fontWeight: 'bold',
-                }}>
-                  #{i + 1}
-                </div>
+              )}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                padding: 14,
+                backgroundColor: '#0f172a',
+              }}>
+                <span style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
+                  {(nft1.name || 'NFT').slice(0, 20)}
+                </span>
+                <span style={{ color: '#64748b', fontSize: 12 }}>
+                  {(nft1.collection || '').slice(0, 25)}
+                </span>
               </div>
-            ))}
+              {/* Rank badge */}
+              <div style={{
+                position: 'absolute',
+                top: 12,
+                left: 12,
+                backgroundColor: '#fbbf24',
+                color: 'black',
+                padding: '6px 14px',
+                borderRadius: 16,
+                fontSize: 14,
+                fontWeight: 'bold',
+              }}>
+                #1
+              </div>
+            </div>
+
+            {/* NFT 2 (Featured - slightly larger) */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                flex: 1.1,
+                backgroundColor: '#1e293b',
+                borderRadius: 20,
+                overflow: 'hidden',
+                border: '3px solid #a855f7',
+                position: 'relative',
+              }}
+            >
+              {nft2.image && (
+                <img
+                  src={nft2.image}
+                  width={380}
+                  height={340}
+                  style={{ objectFit: 'cover' }}
+                />
+              )}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                padding: 14,
+                backgroundColor: '#0f172a',
+              }}>
+                <span style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
+                  {(nft2.name || 'NFT').slice(0, 20)}
+                </span>
+                <span style={{ color: '#64748b', fontSize: 12 }}>
+                  {(nft2.collection || '').slice(0, 25)}
+                </span>
+              </div>
+              {/* Rank badge */}
+              <div style={{
+                position: 'absolute',
+                top: 12,
+                left: 12,
+                backgroundColor: '#a855f7',
+                color: 'white',
+                padding: '6px 14px',
+                borderRadius: 16,
+                fontSize: 14,
+                fontWeight: 'bold',
+              }}>
+                #2
+              </div>
+            </div>
+
+            {/* NFT 3 */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                flex: 1,
+                backgroundColor: '#1e293b',
+                borderRadius: 20,
+                overflow: 'hidden',
+                border: '2px solid #334155',
+                position: 'relative',
+              }}
+            >
+              {nft3.image && (
+                <img
+                  src={nft3.image}
+                  width={350}
+                  height={320}
+                  style={{ objectFit: 'cover' }}
+                />
+              )}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                padding: 14,
+                backgroundColor: '#0f172a',
+              }}>
+                <span style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
+                  {(nft3.name || 'NFT').slice(0, 20)}
+                </span>
+                <span style={{ color: '#64748b', fontSize: 12 }}>
+                  {(nft3.collection || '').slice(0, 25)}
+                </span>
+              </div>
+              {/* Rank badge */}
+              <div style={{
+                position: 'absolute',
+                top: 12,
+                left: 12,
+                backgroundColor: '#6b7280',
+                color: 'white',
+                padding: '6px 14px',
+                borderRadius: 16,
+                fontSize: 14,
+                fontWeight: 'bold',
+              }}>
+                #3
+              </div>
+            </div>
           </div>
 
           {/* Footer */}
           <div style={{
             display: 'flex',
             justifyContent: 'center',
-            marginTop: 24,
+            marginTop: 20,
           }}>
-            <span style={{ color: '#64748b', fontSize: 20 }}>
+            <span style={{ color: '#64748b', fontSize: 18 }}>
               Your Based NFTs • fiend-finder.vercel.app
             </span>
           </div>
@@ -157,12 +260,13 @@ export async function GET(req: NextRequest) {
           backgroundColor: '#0f172a',
           alignItems: 'center',
           justifyContent: 'center',
+          flexDirection: 'column',
         }}>
-          <div style={{ color: 'white', fontSize: 48 }}>Top 3 NFTs</div>
+          <div style={{ color: 'white', fontSize: 48, marginBottom: 16 }}>Top 3 NFTs</div>
+          <div style={{ color: '#64748b', fontSize: 24 }}>fiend-finder.vercel.app</div>
         </div>
       ),
       { width: 1200, height: 630 }
     );
   }
 }
-
