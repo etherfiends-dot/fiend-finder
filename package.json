@@ -11,9 +11,11 @@
   "dependencies": {
     "@coinbase/onchainkit": "^1.1.2",
     "@farcaster/frame-sdk": "^0.1.12",
+    "@opensea/seaport-js": "^4.0.5",
     "@tanstack/react-query": "^5.90.12",
     "@vercel/og": "^0.8.5",
     "alchemy-sdk": "^3.6.5",
+    "ethers": "^6.16.0",
     "gif-encoder-2": "^1.0.5",
     "jimp": "^1.6.0",
     "next": "16.0.7",

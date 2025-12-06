@@ -3,6 +3,8 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import sdk from '@farcaster/frame-sdk';
+import { ethers } from 'ethers';
+import { initSeaport, fulfillOrder, SEAPORT_ADDRESS, getPriceInWei } from '@/lib/seaport';
 
 interface BundleNft {
   name: string;
@@ -11,19 +13,28 @@ interface BundleNft {
   tokenId: string;
 }
 
+interface SeaportOrder {
+  parameters: any;
+  signature: string;
+}
+
 interface BundleData {
   seller: string;
   sellerFid: number;
   sellerPfp: string;
+  sellerAddress?: string;
   price: string;
   currency: 'ETH' | 'USDC';
   nfts: BundleNft[];
+  seaportOrder?: SeaportOrder;
 }
 
 function BundleContent() {
   const searchParams = useSearchParams();
   const [bundleData, setBundleData] = useState<BundleData | null>(null);
   const [purchasing, setPurchasing] = useState(false);
+  const [purchaseStep, setPurchaseStep] = useState<'idle' | 'connecting' | 'confirming' | 'processing'>('idle');
+  const [txHash, setTxHash] = useState<string | null>(null);
 
   useEffect(() => {
     const data = searchParams.get('data');
@@ -35,25 +46,92 @@ function BundleContent() {
         console.error('Failed to decode bundle data:', err);
       }
     }
-    
-    // Signal ready to Farcaster
     sdk.actions.ready();
   }, [searchParams]);
 
   const handleBuy = async () => {
+    if (!bundleData) return;
+
+    // Check if this is a Seaport order
+    if (!bundleData.seaportOrder) {
+      alert('This listing was created before Seaport integration. Please ask the seller to create a new listing.');
+      return;
+    }
+
     setPurchasing(true);
-    setTimeout(() => {
-      alert('🚧 Purchase functionality coming soon!\n\nThis will integrate with a smart contract for secure NFT bundle purchases.');
+    setPurchaseStep('connecting');
+
+    try {
+      // Check for wallet
+      if (typeof window === 'undefined' || !window.ethereum) {
+        alert('Please connect a wallet to purchase. Make sure you have MetaMask or another Web3 wallet installed.');
+        setPurchasing(false);
+        setPurchaseStep('idle');
+        return;
+      }
+
+      // Connect to provider
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const buyerAddress = await signer.getAddress();
+
+      // Check if buyer is not the seller
+      if (bundleData.sellerAddress && buyerAddress.toLowerCase() === bundleData.sellerAddress.toLowerCase()) {
+        alert('You cannot buy your own listing!');
+        setPurchasing(false);
+        setPurchaseStep('idle');
+        return;
+      }
+
+      // Check balance
+      const priceInWei = getPriceInWei(bundleData.price, bundleData.currency);
+      if (bundleData.currency === 'ETH') {
+        const balance = await provider.getBalance(buyerAddress);
+        if (balance < BigInt(priceInWei)) {
+          alert(`Insufficient ETH balance. You need ${bundleData.price} ETH.`);
+          setPurchasing(false);
+          setPurchaseStep('idle');
+          return;
+        }
+      }
+
+      // Initialize Seaport
+      const seaport = initSeaport(provider);
+
+      setPurchaseStep('confirming');
+
+      // Fulfill the order
+      const tx = await fulfillOrder(seaport, bundleData.seaportOrder);
+      
+      setPurchaseStep('processing');
+      setTxHash(tx.hash);
+
+      // Wait for confirmation
+      await tx.wait();
+
+      alert(`🎉 Purchase successful!\n\nYou now own ${bundleData.nfts.length} NFTs!\n\nTransaction: ${tx.hash}`);
+
+    } catch (err: any) {
+      console.error('Purchase failed:', err);
+      if (err.code === 'ACTION_REJECTED') {
+        alert('Transaction cancelled');
+      } else {
+        alert(`Purchase failed: ${err.message || 'Unknown error'}`);
+      }
+    } finally {
       setPurchasing(false);
-    }, 1000);
+      setPurchaseStep('idle');
+    }
   };
 
   const contactSeller = async () => {
     if (!bundleData) return;
-    
     try {
+      const priceDisplay = bundleData.currency === 'USDC' 
+        ? `$${bundleData.price} USDC` 
+        : `${bundleData.price} ETH`;
       await sdk.actions.composeCast({
-        text: `@${bundleData.seller} Hey! I'm interested in your NFT bundle for ${bundleData.price} ETH 👀`,
+        text: `@${bundleData.seller} Hey! I'm interested in your NFT bundle for ${priceDisplay} 👀`,
       });
     } catch (err) {
       console.error('Failed to compose cast:', err);
@@ -67,6 +145,8 @@ function BundleContent() {
       </div>
     );
   }
+
+  const hasSeaportOrder = !!bundleData.seaportOrder;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-green-950/20 to-slate-950 text-white">
@@ -94,6 +174,11 @@ function BundleContent() {
             <p className="text-slate-400 text-xs">Seller</p>
             <p className="font-semibold">@{bundleData.seller}</p>
           </div>
+          {hasSeaportOrder && (
+            <div className="ml-auto flex items-center gap-1 text-xs text-cyan-400 bg-cyan-500/10 px-2 py-1 rounded-full">
+              <span>🌊</span> Seaport
+            </div>
+          )}
         </div>
 
         <div className="mb-6">
@@ -130,18 +215,24 @@ function BundleContent() {
         <div className="space-y-3">
           <button
             onClick={handleBuy}
-            disabled={purchasing}
+            disabled={purchasing || !hasSeaportOrder}
             className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${
               purchasing
                 ? 'bg-green-500/50 cursor-wait'
-                : 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg shadow-green-500/25'
+                : !hasSeaportOrder
+                  ? 'bg-slate-700 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg shadow-green-500/25'
             }`}
           >
             {purchasing ? (
               <>
                 <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></span>
-                Processing...
+                {purchaseStep === 'connecting' && 'Connecting Wallet...'}
+                {purchaseStep === 'confirming' && 'Confirm in Wallet...'}
+                {purchaseStep === 'processing' && 'Processing...'}
               </>
+            ) : !hasSeaportOrder ? (
+              <>Legacy Listing (Contact Seller)</>
             ) : (
               <>
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -163,8 +254,22 @@ function BundleContent() {
           </button>
         </div>
 
+        {txHash && (
+          <div className="mt-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
+            <p className="text-green-400 text-sm font-medium">Transaction submitted!</p>
+            <a 
+              href={`https://basescan.org/tx/${txHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-green-300 text-xs hover:underline break-all"
+            >
+              View on BaseScan →
+            </a>
+          </div>
+        )}
+
         <p className="text-center text-slate-500 text-xs mt-6">
-          🔒 Secure escrow powered by smart contracts
+          🌊 Secured by Seaport Protocol • 0% platform fees
         </p>
 
         <div className="mt-8 text-center">
@@ -191,4 +296,3 @@ export default function BundleClient() {
     </Suspense>
   );
 }
-

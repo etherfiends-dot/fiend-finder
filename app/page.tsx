@@ -5,6 +5,15 @@ import sdk from '@farcaster/frame-sdk';
 import { Avatar, Identity, Name, Address, Badge } from '@coinbase/onchainkit/identity';
 import { TokenImage } from '@coinbase/onchainkit/token';
 import { base } from 'viem/chains';
+import { ethers } from 'ethers';
+import { 
+  initSeaport, 
+  createBundleOrder, 
+  checkApprovals, 
+  approveForSeaport,
+  getPriceInWei,
+  SEAPORT_ADDRESS 
+} from '@/lib/seaport';
 
 // ETH token for Base
 const ethToken = {
@@ -66,6 +75,8 @@ export default function Home() {
   const [bagPrice, setBagPrice] = useState('0.001');
   const [bagCurrency, setBagCurrency] = useState<'ETH' | 'USDC'>('ETH');
   const [ethPrice, setEthPrice] = useState<number | null>(null);
+  const [creatingListing, setCreatingListing] = useState(false);
+  const [listingStep, setListingStep] = useState<'idle' | 'connecting' | 'approving' | 'signing' | 'done'>('idle');
   const [swapUsername, setSwapUsername] = useState('');
   const [mySwapNft, setMySwapNft] = useState<string | null>(null);
   const [theirSwapNft, setTheirSwapNft] = useState<string | null>(null);
@@ -213,45 +224,111 @@ export default function Home() {
   };
 
   // Cast bag for sale
+  // Create Seaport listing and cast
   const castBag = async () => {
     if (!scanResults || bagNfts.size === 0 || !bagPrice) return;
     
-    // Get the selected NFT data - keys are in format: tokenId-collectionName-index
-    const selectedNfts = scanResults.nfts
-      .map((nft, i) => ({ nft, key: getNftKey(nft, i) }))
-      .filter(({ key }) => bagNfts.has(key))
-      .map(({ nft }) => ({
-        name: nft.name,
-        image: nft.image,
-        contract: nft.contractAddress,
-        tokenId: nft.tokenId,
-      }));
-
-    // Create bundle data for URL
-    const bundleData = {
-      seller: scanResults.user,
-      sellerFid: currentUserFid,
-      sellerPfp: scanResults.pfp,
-      price: bagPrice,
-      currency: bagCurrency,
-      nfts: selectedNfts,
-    };
-
-    const encodedData = encodeURIComponent(btoa(JSON.stringify(bundleData)));
-    const bundleUrl = `https://fiend-finder.vercel.app/bundle?data=${encodedData}`;
-
-    // Build cast text
-    const nftCount = selectedNfts.length;
-    const priceDisplay = bagCurrency === 'USDC' ? `$${bagPrice} USDC` : `${bagPrice} ETH`;
-    const castText = `🛍️ NFT Bundle for Sale!\n\n${nftCount} NFT${nftCount > 1 ? 's' : ''} for ${priceDisplay}\n\nCheck it out 👇`;
-
+    setCreatingListing(true);
+    setListingStep('connecting');
+    
     try {
+      // Get the selected NFT data
+      const selectedNftsData = scanResults.nfts
+        .map((nft, i) => ({ nft, key: getNftKey(nft, i) }))
+        .filter(({ key }) => bagNfts.has(key))
+        .map(({ nft }) => ({
+          name: nft.name,
+          image: nft.image,
+          contractAddress: nft.contractAddress,
+          tokenId: nft.tokenId,
+        }));
+
+      // Check if ethereum provider is available
+      if (typeof window === 'undefined' || !window.ethereum) {
+        alert('Please connect a wallet to create listings. Make sure you have MetaMask or another Web3 wallet installed.');
+        setCreatingListing(false);
+        setListingStep('idle');
+        return;
+      }
+
+      // Connect to provider
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const sellerAddress = await signer.getAddress();
+
+      // Initialize Seaport
+      const seaport = initSeaport(provider);
+
+      // Check approvals
+      setListingStep('approving');
+      const { approved, needsApproval } = await checkApprovals(
+        provider,
+        sellerAddress,
+        selectedNftsData
+      );
+
+      // Approve if needed
+      if (!approved) {
+        for (const contractAddress of needsApproval) {
+          await approveForSeaport(provider, contractAddress);
+        }
+      }
+
+      // Create the Seaport order
+      setListingStep('signing');
+      const priceInWei = getPriceInWei(bagPrice, bagCurrency);
+      const order = await createBundleOrder(
+        seaport,
+        sellerAddress,
+        selectedNftsData,
+        priceInWei,
+        bagCurrency
+      );
+
+      // Create bundle data for URL (includes the Seaport order!)
+      const bundleData = {
+        seller: scanResults.user,
+        sellerFid: currentUserFid,
+        sellerPfp: scanResults.pfp,
+        sellerAddress,
+        price: bagPrice,
+        currency: bagCurrency,
+        nfts: selectedNftsData.map(n => ({
+          name: n.name,
+          image: n.image,
+          contract: n.contractAddress,
+          tokenId: n.tokenId,
+        })),
+        // Include the Seaport order for fulfillment
+        seaportOrder: order,
+      };
+
+      const encodedData = encodeURIComponent(btoa(JSON.stringify(bundleData)));
+      const bundleUrl = `https://fiend-finder.vercel.app/bundle?data=${encodedData}`;
+
+      // Build cast text
+      const nftCount = selectedNftsData.length;
+      const priceDisplay = bagCurrency === 'USDC' ? `$${bagPrice} USDC` : `${bagPrice} ETH`;
+      const castText = `🛍️ NFT Bundle for Sale!\n\n${nftCount} NFT${nftCount > 1 ? 's' : ''} for ${priceDisplay}\n\nPowered by Seaport 🌊`;
+
+      setListingStep('done');
+
+      // Cast to Farcaster
       await sdk.actions.composeCast({
         text: castText,
         embeds: [bundleUrl],
       });
-    } catch (err) {
-      console.error('Failed to cast bundle:', err);
+
+      // Reset state
+      setBagNfts(new Set());
+      setBagPrice('0.001');
+      
+    } catch (err: any) {
+      console.error('Failed to create listing:', err);
+      alert(`Error: ${err.message || 'Failed to create listing'}`);
+    } finally {
+      setCreatingListing(false);
+      setListingStep('idle');
     }
   };
 
@@ -702,61 +779,41 @@ export default function Home() {
 
               <button 
                 onClick={castBag}
-                disabled={!bagPrice || parseFloat(bagPrice) <= 0}
+                disabled={!bagPrice || parseFloat(bagPrice) <= 0 || creatingListing}
                 className={`w-full py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
-                  bagPrice && parseFloat(bagPrice) > 0
-                    ? 'bg-green-500 hover:bg-green-600 text-white'
-                    : 'bg-green-500/50 text-white/50 cursor-not-allowed'
+                  creatingListing
+                    ? 'bg-green-500/70 cursor-wait text-white'
+                    : bagPrice && parseFloat(bagPrice) > 0
+                      ? 'bg-green-500 hover:bg-green-600 text-white'
+                      : 'bg-green-500/50 text-white/50 cursor-not-allowed'
                 }`}
               >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                Cast Bundle for Sale
+                {creatingListing ? (
+                  <>
+                    <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                    {listingStep === 'connecting' && 'Connecting Wallet...'}
+                    {listingStep === 'approving' && 'Approving NFTs...'}
+                    {listingStep === 'signing' && 'Sign Order...'}
+                    {listingStep === 'done' && 'Creating Cast...'}
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Create Listing (Seaport)
+                  </>
+                )}
               </button>
+              <p className="text-slate-500 text-xs mt-2 text-center flex items-center justify-center gap-1">
+                <span>🌊</span> Powered by Seaport Protocol • Zero platform fees
+              </p>
             </>
           )}
         </div>
 
-        {/* P2P Swap */}
-        <div className="bg-gradient-to-br from-orange-900/20 to-slate-900 p-4 rounded-xl border border-orange-500/30">
-          <div className="flex items-center gap-2 mb-2">
-            <svg className="h-5 w-5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-            </svg>
-            <h3 className="font-bold text-white">P2P Swap</h3>
-          </div>
-          <p className="text-slate-400 text-sm mb-4">Propose a direct swap with another user</p>
-          
-          <input
-            type="text"
-            placeholder="Enter Farcaster username"
-            value={swapUsername}
-            onChange={(e) => setSwapUsername(e.target.value)}
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm placeholder:text-slate-500 mb-4"
-          />
-
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <p className="text-slate-500 text-xs uppercase mb-2">Your NFT</p>
-              <div className="aspect-square bg-slate-800 rounded-lg border-2 border-dashed border-slate-600 flex items-center justify-center">
-                {mySwapNft ? (
-                  <img src={scanResults.nfts[0].image} className="w-full h-full object-cover rounded-lg" />
-                ) : (
-                  <span className="text-slate-500 text-xs">Select</span>
-                )}
-              </div>
-            </div>
-            <div>
-              <p className="text-slate-500 text-xs uppercase mb-2">Their NFT</p>
-              <div className="aspect-square bg-slate-800 rounded-lg border-2 border-dashed border-slate-600 flex items-center justify-center">
-                <span className="text-slate-500 text-xs">Enter username first</span>
-              </div>
-            </div>
-          </div>
-
-          <button disabled className="w-full py-3 bg-orange-500/50 text-white/50 rounded-lg font-medium cursor-not-allowed">
-            Propose Swap
-          </button>
-        </div>
+        {/* P2P Swap - Hidden for now, coming soon */}
+        {/* Will be implemented with Seaport protocol */}
       </div>
     );
   };
