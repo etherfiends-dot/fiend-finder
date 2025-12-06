@@ -72,6 +72,11 @@ export default function Home() {
   const [memeNftIndex, setMemeNftIndex] = useState<number | null>(null);
   const [memeTopText, setMemeTopText] = useState('');
   const [memeBottomText, setMemeBottomText] = useState('');
+  
+  // Slideshow state
+  const [slideshowActive, setSlideshowActive] = useState(false);
+  const [slideshowIndex, setSlideshowIndex] = useState(0);
+  const slideshowInterval = useRef<NodeJS.Timeout | null>(null);
 
   // LocalStorage keys
   const getStorageKey = (fid: number) => `hidden-nfts-${fid}`;
@@ -154,6 +159,50 @@ export default function Home() {
       return next;
     });
   };
+
+  // Slideshow controls
+  const startSlideshow = () => {
+    if (!scanResults || scanResults.nfts.length === 0) return;
+    setSlideshowActive(true);
+    setSlideshowIndex(0);
+    
+    // Auto-advance every 4 seconds
+    slideshowInterval.current = setInterval(() => {
+      setSlideshowIndex(prev => {
+        const visibleNfts = scanResults.nfts.filter((_, i) => !hiddenNfts.has(getNftKey(scanResults.nfts[i], i)));
+        return (prev + 1) % visibleNfts.length;
+      });
+    }, 4000);
+  };
+
+  const stopSlideshow = () => {
+    setSlideshowActive(false);
+    if (slideshowInterval.current) {
+      clearInterval(slideshowInterval.current);
+      slideshowInterval.current = null;
+    }
+  };
+
+  const nextSlide = () => {
+    if (!scanResults) return;
+    const visibleNfts = scanResults.nfts.filter((_, i) => !hiddenNfts.has(getNftKey(scanResults.nfts[i], i)));
+    setSlideshowIndex(prev => (prev + 1) % visibleNfts.length);
+  };
+
+  const prevSlide = () => {
+    if (!scanResults) return;
+    const visibleNfts = scanResults.nfts.filter((_, i) => !hiddenNfts.has(getNftKey(scanResults.nfts[i], i)));
+    setSlideshowIndex(prev => (prev - 1 + visibleNfts.length) % visibleNfts.length);
+  };
+
+  // Cleanup slideshow on unmount
+  useEffect(() => {
+    return () => {
+      if (slideshowInterval.current) {
+        clearInterval(slideshowInterval.current);
+      }
+    };
+  }, []);
 
   // Cast meme
   const castMeme = async () => {
@@ -540,21 +589,28 @@ export default function Home() {
           
           {/* Preview */}
           <div className="aspect-video bg-slate-800 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
-            {scanResults.nfts[0] ? (
-              <img src={scanResults.nfts[0].image} className="w-full h-full object-contain" />
+            {scanResults.nfts.filter((_, i) => !hiddenNfts.has(getNftKey(scanResults.nfts[i], i)))[0] ? (
+              <img src={scanResults.nfts.filter((_, i) => !hiddenNfts.has(getNftKey(scanResults.nfts[i], i)))[0].image} className="w-full h-full object-contain" />
             ) : (
               <span className="text-slate-500">No NFTs to display</span>
             )}
           </div>
           
           <div className="flex gap-2">
-            <button className="flex-1 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm font-medium">
+            <button 
+              onClick={startSlideshow}
+              disabled={scanResults.nfts.filter((_, i) => !hiddenNfts.has(getNftKey(scanResults.nfts[i], i))).length === 0}
+              className="flex-1 py-2 bg-purple-500 hover:bg-purple-600 disabled:bg-purple-500/30 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+            >
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+              </svg>
               Start Slideshow
             </button>
-            <button className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm">
-              ⚙️
-            </button>
           </div>
+          <p className="text-slate-500 text-xs mt-2 text-center">
+            {scanResults.nfts.filter((_, i) => !hiddenNfts.has(getNftKey(scanResults.nfts[i], i))).length} NFTs • Auto-advances every 4s
+          </p>
         </div>
 
         {/* Meme Generator */}
@@ -740,6 +796,90 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {/* Fullscreen Slideshow Overlay */}
+      {slideshowActive && scanResults && (
+        <div className="fixed inset-0 bg-black z-50 flex flex-col">
+          {/* Close button */}
+          <button
+            onClick={stopSlideshow}
+            className="absolute top-4 right-4 z-10 w-12 h-12 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors"
+          >
+            <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          {/* Slide counter */}
+          <div className="absolute top-4 left-4 z-10 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
+            <span className="text-white text-sm font-medium">
+              {slideshowIndex + 1} / {scanResults.nfts.filter((_, i) => !hiddenNfts.has(getNftKey(scanResults.nfts[i], i))).length}
+            </span>
+          </div>
+
+          {/* Main image area */}
+          <div className="flex-1 flex items-center justify-center p-4">
+            {(() => {
+              const visibleNfts = scanResults.nfts.filter((_, i) => !hiddenNfts.has(getNftKey(scanResults.nfts[i], i)));
+              const currentNft = visibleNfts[slideshowIndex];
+              if (!currentNft) return null;
+              return (
+                <div className="relative w-full h-full flex items-center justify-center">
+                  <img
+                    src={currentNft.image}
+                    alt={currentNft.name}
+                    className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                  />
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Navigation arrows */}
+          <button
+            onClick={prevSlide}
+            className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors"
+          >
+            <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            onClick={nextSlide}
+            className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors"
+          >
+            <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          {/* NFT info bar */}
+          <div className="bg-gradient-to-t from-black/80 to-transparent p-6">
+            {(() => {
+              const visibleNfts = scanResults.nfts.filter((_, i) => !hiddenNfts.has(getNftKey(scanResults.nfts[i], i)));
+              const currentNft = visibleNfts[slideshowIndex];
+              if (!currentNft) return null;
+              return (
+                <div className="text-center">
+                  <h2 className="text-white text-xl font-bold">{currentNft.name}</h2>
+                  <p className="text-slate-400">{currentNft.collectionName}</p>
+                  {currentNft.floorPrice > 0 && (
+                    <p className="text-purple-400 text-sm mt-1">{currentNft.floorPrice.toFixed(4)} ETH</p>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Progress bar */}
+          <div className="h-1 bg-white/10">
+            <div 
+              className="h-full bg-purple-500 transition-all duration-300"
+              style={{ width: `${((slideshowIndex + 1) / scanResults.nfts.filter((_, i) => !hiddenNfts.has(getNftKey(scanResults.nfts[i], i))).length) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
     </main>
   );
 }
