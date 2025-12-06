@@ -2,6 +2,19 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import sdk from '@farcaster/frame-sdk';
+import { Avatar, Identity, Name, Address, Badge } from '@coinbase/onchainkit/identity';
+import { TokenImage } from '@coinbase/onchainkit/token';
+import { base } from 'viem/chains';
+
+// ETH token for Base
+const ethToken = {
+  name: 'Ethereum',
+  address: '' as const,
+  symbol: 'ETH',
+  decimals: 18,
+  image: 'https://wallet-api-production.s3.amazonaws.com/uploads/tokens/eth_288.png',
+  chainId: base.id,
+};
 
 // Define types
 type NFT = {
@@ -19,6 +32,7 @@ type ScanResult = {
   fid: number;
   displayName: string;
   pfp: string;
+  wallets: string[];
   walletCount: number;
   totalFound: number;
   totalValueEth: number;
@@ -131,7 +145,10 @@ export default function Home() {
   if (!isSDKLoaded) {
     return (
       <div className="bg-slate-950 text-white h-screen flex items-center justify-center">
-        <span className="animate-spin h-8 w-8 border-4 border-purple-500 border-t-transparent rounded-full"></span>
+        <div className="flex flex-col items-center gap-3">
+          <span className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></span>
+          <span className="text-slate-400 text-sm">Initializing...</span>
+        </div>
       </div>
     );
   }
@@ -200,13 +217,39 @@ export default function Home() {
                   <p className="text-slate-400 text-xs uppercase">NFTs</p>
                 </div>
               </div>
+
+              {/* Wallet Addresses with OnchainKit Identity */}
+              {scanResults.wallets && scanResults.wallets.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-700/50">
+                  <p className="text-slate-500 text-xs uppercase mb-2">Connected Wallets</p>
+                  <div className="space-y-2">
+                    {scanResults.wallets.slice(0, 3).map((wallet) => (
+                      <Identity
+                        key={wallet}
+                        address={wallet as `0x${string}`}
+                        chain={base}
+                        className="!bg-slate-800/50 !rounded-lg !px-3 !py-2"
+                      >
+                        <Avatar className="!w-6 !h-6" />
+                        <Name className="!text-white !text-sm" />
+                        <Address className="!text-slate-400 !text-xs" />
+                        <Badge className="!bg-blue-500" />
+                      </Identity>
+                    ))}
+                    {scanResults.wallets.length > 3 && (
+                      <p className="text-slate-500 text-xs">+{scanResults.wallets.length - 3} more wallets</p>
+                    )}
+                  </div>
+                </div>
+              )}
               
-              {/* Portfolio Value */}
+              {/* Portfolio Value with ETH Icon */}
               {scanResults.totalValueEth > 0 && (
                 <div className="mt-4 pt-4 border-t border-slate-700/50">
                   <div className="flex items-center justify-between">
                     <span className="text-slate-400 text-sm">Portfolio Value</span>
                     <div className="flex items-center gap-2">
+                      <TokenImage token={ethToken} size={20} />
                       <span className="text-xl font-bold text-white">{scanResults.totalValueEth.toFixed(4)}</span>
                       <span className="text-slate-400 text-sm">ETH</span>
                     </div>

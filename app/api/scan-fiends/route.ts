@@ -213,6 +213,7 @@ export async function GET(req: NextRequest) {
       fid: user.fid,
       displayName: user.display_name,
       pfp: user.pfp_url,
+      wallets: uniqueWallets,
       walletCount: uniqueWallets.length,
       totalFound: allNfts.length,
       totalValueEth: Math.round(totalValueEth * 10000) / 10000, // Round to 4 decimals
