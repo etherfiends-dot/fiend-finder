@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import GifEncoder from "gif-encoder-2";
-import Jimp from "jimp";
+import { Jimp } from "jimp";
 
 // Max dimensions for the GIF (for performance)
 const MAX_SIZE = 512;
@@ -45,17 +45,17 @@ export async function POST(req: NextRequest) {
         const image = await Jimp.read(buffer);
         
         // Resize to fit within MAX_SIZE while maintaining aspect ratio
-        if (image.getWidth() > MAX_SIZE || image.getHeight() > MAX_SIZE) {
-          image.scaleToFit(MAX_SIZE, MAX_SIZE);
+        if (image.width > MAX_SIZE || image.height > MAX_SIZE) {
+          image.scaleToFit({ w: MAX_SIZE, h: MAX_SIZE });
         }
         
         // Use first image dimensions for GIF
         if (processedImages.length === 0) {
-          width = image.getWidth();
-          height = image.getHeight();
+          width = image.width;
+          height = image.height;
         } else {
           // Resize subsequent images to match first
-          image.resize(width, height);
+          image.resize({ w: width, h: height });
         }
         
         // Get raw pixel data (RGBA)
