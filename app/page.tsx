@@ -218,7 +218,7 @@ export default function Home() {
     setBagNfts(prev => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
-      else if (next.size < 5) next.add(key);
+      else if (next.size < 10) next.add(key);
       return next;
     });
   };
@@ -698,23 +698,23 @@ export default function Home() {
             </svg>
             <h3 className="font-bold text-white">Buy This Bag</h3>
           </div>
-          <p className="text-slate-400 text-sm mb-4">Select up to 5 NFTs to bundle and sell</p>
+          <p className="text-slate-400 text-sm mb-4">Select up to 10 NFTs to bundle and sell</p>
           
           <div className="flex items-center justify-between mb-3">
-            <span className="text-slate-400 text-sm">Selected: <span className="text-green-400 font-bold">{bagNfts.size}/5</span></span>
+            <span className="text-slate-400 text-sm">Selected: <span className="text-green-400 font-bold">{bagNfts.size}/10</span></span>
           </div>
 
           {/* Mini NFT selector */}
           <div className="grid grid-cols-5 gap-2 mb-4">
-            {scanResults.nfts.slice(0, 10).map((nft, i) => {
+            {scanResults.nfts.slice(0, 20).map((nft, i) => {
               const key = getNftKey(nft, i);
               const isSelected = bagNfts.has(key);
               return (
                 <button
                   key={key}
                   onClick={() => toggleBagNft(key)}
-                  disabled={bagNfts.size >= 5 && !isSelected}
-                  className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${isSelected ? 'border-green-500' : 'border-slate-700'} ${bagNfts.size >= 5 && !isSelected ? 'opacity-30' : ''}`}
+                  disabled={bagNfts.size >= 10 && !isSelected}
+                  className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${isSelected ? 'border-green-500' : 'border-slate-700'} ${bagNfts.size >= 10 && !isSelected ? 'opacity-30' : ''}`}
                 >
                   <img src={nft.image} alt={nft.name} className="w-full h-full object-cover" />
                 </button>
