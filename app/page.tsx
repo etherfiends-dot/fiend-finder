@@ -31,6 +31,38 @@ export default function Home() {
   const hasAutoScanned = useRef(false);
   const [hiddenNfts, setHiddenNfts] = useState<Set<string>>(new Set());
   const [showHidden, setShowHidden] = useState(false);
+  const hasLoadedHidden = useRef(false);
+
+  // LocalStorage key for hidden NFTs
+  const getStorageKey = (fid: number) => `hidden-nfts-${fid}`;
+
+  // Load hidden NFTs from localStorage when FID is available
+  useEffect(() => {
+    if (currentUserFid && !hasLoadedHidden.current) {
+      hasLoadedHidden.current = true;
+      try {
+        const stored = localStorage.getItem(getStorageKey(currentUserFid));
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setHiddenNfts(new Set(parsed));
+        }
+      } catch (e) {
+        console.error('Failed to load hidden NFTs from storage:', e);
+      }
+    }
+  }, [currentUserFid]);
+
+  // Save hidden NFTs to localStorage whenever they change
+  useEffect(() => {
+    if (currentUserFid && hasLoadedHidden.current) {
+      try {
+        const toStore = Array.from(hiddenNfts);
+        localStorage.setItem(getStorageKey(currentUserFid), JSON.stringify(toStore));
+      } catch (e) {
+        console.error('Failed to save hidden NFTs to storage:', e);
+      }
+    }
+  }, [hiddenNfts, currentUserFid]);
 
   // Generate unique key for NFT
   const getNftKey = (nft: NFT, index: number) => `${nft.tokenId}-${nft.collectionName}-${index}`;
