@@ -1141,16 +1141,19 @@ const [templateError, setTemplateError] = useState<string | null>(null);
           </div>
           <div className="relative rounded-lg overflow-hidden border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
             <video
-              src="/fiends/Ape_s_Shocking_NFT_Declaration.mp4"
-              poster="/fiends/ape.jpg"
               className="w-full h-full object-cover"
               muted
               playsInline
               autoPlay
               loop
               controls
+              preload="metadata"
+              poster="/fiends/ape.jpg"
               style={{ maxHeight: 220 }}
-            />
+            >
+              <source src="/fiends/Ape_s_Shocking_NFT_Declaration.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
           </div>
         </div>
 
