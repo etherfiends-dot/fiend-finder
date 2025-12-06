@@ -64,6 +64,11 @@ function setFloorPriceCache(contractAddress: string, price: number): void {
   floorPriceCache.set(contractAddress.toLowerCase(), { data: price, timestamp: Date.now() });
 }
 
+// Helper to check if floor price response is valid (not an error)
+function isValidFloorPrice(data: any): data is { floorPrice: number } {
+  return data && typeof data.floorPrice === 'number' && data.floorPrice > 0;
+}
+
 // Fetch floor price for a contract
 async function fetchFloorPrice(contractAddress: string): Promise<number> {
   // Check cache first
@@ -75,9 +80,9 @@ async function fetchFloorPrice(contractAddress: string): Promise<number> {
     
     // Try OpenSea first, then LooksRare
     let price = 0;
-    if (floorPrice.openSea?.floorPrice) {
+    if (isValidFloorPrice(floorPrice.openSea)) {
       price = floorPrice.openSea.floorPrice;
-    } else if (floorPrice.looksRare?.floorPrice) {
+    } else if (isValidFloorPrice(floorPrice.looksRare)) {
       price = floorPrice.looksRare.floorPrice;
     }
     
