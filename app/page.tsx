@@ -784,40 +784,36 @@ const [templateError, setTemplateError] = useState<string | null>(null);
     
     const contentType = mintMode === 'meme' ? 'meme' : 'GIF';
     
+    const embed = mintResult.ipfsUrl || '';
+
     if (mintAction === 'cast') {
-      // Share on Farcaster
       const castText = `Check out this ${contentType} I made with My Based NFTs! 🎨`;
       try {
         if (sdk.actions.composeCast) {
-          await sdk.actions.composeCast({
-            text: castText,
-            embeds: [mintResult.ipfsUrl || ''],
-          });
+          await sdk.actions.composeCast({ text: castText, embeds: [embed] });
         }
       } catch (e) {
-        // Fallback to clipboard
-        await navigator.clipboard.writeText(`${castText}\n\n${mintResult.ipfsUrl}`);
-        alert('Copied to clipboard!');
+        await navigator.clipboard.writeText(`${castText}\n\n${embed}`);
       }
     } else if (mintAction === 'mint') {
-      // Open Zora create page
-      if (mintResult.zoraUrl) {
-        window.open(mintResult.zoraUrl, '_blank');
-      }
-    } else if (mintAction === 'sell') {
-      // Share listing on Farcaster
-      const priceDisplay = formatPrice(mintPrice, mintCoin.decimals);
-      const castText = `🎨 New ${contentType} for sale!\n\n💰 ${priceDisplay} $${mintCoin.symbol}\n🔥 Open edition`;
+      // Stay in Farcaster: share a mint intent using Zora contract on Base
+      const castText = `Mint this ${contentType} on Zora (Base). Uses Zora contract, no custody.`;
       try {
         if (sdk.actions.composeCast) {
-          await sdk.actions.composeCast({
-            text: castText,
-            embeds: [mintResult.ipfsUrl || ''],
-          });
+          await sdk.actions.composeCast({ text: castText, embeds: [embed] });
         }
       } catch (e) {
-        await navigator.clipboard.writeText(`${castText}\n\n${mintResult.ipfsUrl}`);
-        alert('Copied to clipboard!');
+        await navigator.clipboard.writeText(`${castText}\n\n${embed}`);
+      }
+    } else if (mintAction === 'sell') {
+      const priceDisplay = formatPrice(mintPrice, mintCoin.decimals);
+      const castText = `🎨 ${contentType.toUpperCase()} for sale on Zora (Base)\n💰 ${priceDisplay} $${mintCoin.symbol}\nNo custody; Zora contract.\n${embed}`;
+      try {
+        if (sdk.actions.composeCast) {
+          await sdk.actions.composeCast({ text: castText, embeds: [embed] });
+        }
+      } catch (e) {
+        await navigator.clipboard.writeText(`${castText}\n\n${embed}`);
       }
     }
     
@@ -1693,7 +1689,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
         backgroundRepeat: 'no-repeat',
       }}
     >
-      <div className="max-w-md mx-auto pb-28">
+      <div className="max-w-md mx-auto pb-32">
 
         {/* Error */}
         {error && (
@@ -2077,23 +2073,22 @@ const [templateError, setTemplateError] = useState<string | null>(null);
                           : 'bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white'
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  {mintStep === 'uploading' || mintStep === 'signing' ? (
-                    <>
+                  <>
+                    {mintStep === 'uploading' || mintStep === 'signing' ? (
                       <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
-                      {mintAction === 'cast' && 'Preparing cast...'}
-                      {mintAction === 'mint' && 'Preparing mint...'}
-                      {mintAction === 'sell' && 'Preparing listing...'}
-                    </>
-                  ) : (
-                    <>
+                    ) : (
                       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                       </svg>
-                      {mintAction === 'cast' && 'Cast to Farcaster'}
-                      {mintAction === 'mint' && 'Mint NFT'}
-                      {mintAction === 'sell' && 'Offer for Sale'}
-                    </>
-                  )}
+                    )}
+                    {mintStep === 'uploading' || mintStep === 'signing'
+                      ? 'Working...'
+                      : mintAction === 'cast'
+                        ? 'Cast to Farcaster'
+                        : mintAction === 'mint'
+                          ? 'Mint (Zora contract, Base)'
+                          : 'Offer for Sale'}
+                  </>
                 </button>
               )}
             </div>
@@ -2184,7 +2179,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
         })()
       )}
     </main>
-    <div className="fixed bottom-0 left-0 right-0 z-50">
+        <div className="fixed bottom-0 left-0 right-0 z-50">
       <div className="mx-auto max-w-md px-4 pb-3">
         <div className="flex bg-black/70 border border-[#8C52FF]/50 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-lg overflow-hidden">
           {[
