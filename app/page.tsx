@@ -1105,9 +1105,12 @@ const [templateError, setTemplateError] = useState<string | null>(null);
                   </>
                 )}
               </button>
-              <p className="text-slate-500 text-xs mt-2 text-center flex items-center justify-center gap-1">
-                <span>🌊</span> Powered by Seaport Protocol • Zero platform fees
-              </p>
+              <div className="text-slate-500 text-[11px] mt-2 text-center flex flex-col gap-1">
+                <div className="flex items-center justify-center gap-1">
+                  <span>🌊</span> Powered by Seaport Protocol v1.6 (Base)
+                </div>
+                <div>Contract: 0x0000000000000068F116a894984e2DB1123eB395</div>
+              </div>
             </>
           )}
         </div>
@@ -1137,6 +1140,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
             <div>
               <h3 className="font-bold text-white">Fiend Feature</h3>
               <p className="text-xs text-slate-400">Short loop from your collection</p>
+              <p className="text-[11px] text-slate-500">Video hosted locally from /public/fiends (mp4); plays inline.</p>
             </div>
           </div>
           <div className="relative rounded-lg overflow-hidden border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
@@ -1166,7 +1170,8 @@ const [templateError, setTemplateError] = useState<string | null>(null);
             </svg>
             <h3 className="font-bold text-white">Meme Generator</h3>
           </div>
-          <p className="text-slate-400 text-sm mb-4">Use your NFT or a popular template, then add meme text</p>
+          <p className="text-slate-400 text-sm mb-1">Use your NFT or a popular template, then add meme text</p>
+          <p className="text-[11px] text-slate-500 mb-3">Uploads go to IPFS; “Mint NFT” opens Zora’s create page; casts share on Farcaster. No custody taken.</p>
 
           {/* Source toggle */}
           <div className="flex gap-2 mb-3">
@@ -1421,7 +1426,8 @@ const [templateError, setTemplateError] = useState<string | null>(null);
             </svg>
             <h3 className="font-bold text-white">GIF Creator</h3>
           </div>
-          <p className="text-slate-400 text-sm mb-4">Select 2-10 NFTs to create an animated GIF</p>
+          <p className="text-slate-400 text-sm mb-1">Select 2-10 NFTs to create an animated GIF</p>
+          <p className="text-[11px] text-slate-500 mb-3">GIFs are generated server-side; uploads go to IPFS; “Mint NFT” opens Zora’s create page; casts share on Farcaster.</p>
           
           {/* Selection counter */}
           <div className="flex items-center justify-between mb-3">
@@ -1704,7 +1710,13 @@ const [templateError, setTemplateError] = useState<string | null>(null);
       'linear-gradient(135deg, rgba(12,10,20,0.9) 0%, rgba(12,10,20,0.8) 40%, rgba(12,10,20,0.75) 100%)',
     // Use your dropped asset as the hero background
     heroImage:
-      "url('/fiends/warplet-jacket.png')",
+      "url('/fiends/ETHFIENDS-banner.png')",
+  };
+
+  const tabBackgrounds: Record<Tab, string> = {
+    gallery: "linear-gradient(180deg, rgba(8,6,14,0.9), rgba(8,6,14,0.85)), url('/fiends/NFT.jpg')",
+    trade: "linear-gradient(180deg, rgba(8,6,14,0.9), rgba(8,6,14,0.85)), url('/fiends/warplet-jacket.png')",
+    fun: "linear-gradient(180deg, rgba(8,6,14,0.9), rgba(8,6,14,0.85)), url('/fiends/ETHFIENDS-banner.png')",
   };
 
   return (
@@ -1783,7 +1795,15 @@ const [templateError, setTemplateError] = useState<string | null>(null);
 
         {/* Main Content */}
         {scanResults && !loading && (
-          <div className="px-4 pb-8">
+        <div
+          className="px-4 pb-8"
+          style={{
+            backgroundImage: tabBackgrounds[activeTab],
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+          }}
+        >
             {/* Profile Card - Always visible */}
             <div className="bg-[rgba(12,10,20,0.72)] p-4 rounded-2xl border border-[#8C52FF]/40 mb-4 shadow-[0_16px_50px_rgba(0,0,0,0.35)] backdrop-blur">
               <div className="flex items-center gap-4">
