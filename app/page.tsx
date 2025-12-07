@@ -17,7 +17,6 @@ import {
 } from '@/lib/seaport';
 import { MEMECOINS, type Memecoin, formatPrice, parsePrice } from '@/lib/zora';
 import { generateMemeImage, base64ToBlob } from '@/lib/ipfs';
-import MemecoinSelector from '@/components/MemecoinSelector';
 
 // ETH token for Base
 const ethToken = {
@@ -70,9 +69,8 @@ export default function Home() {
   const [showHidden, setShowHidden] = useState(false);
   const hasLoadedHidden = useRef(false);
   
-  // Top 3 Curator state
-  const [selectedNfts, setSelectedNfts] = useState<Set<string>>(new Set());
-  const hasLoadedTop3 = useRef(false);
+  // Gallery poll state
+  const [selectedGalleryNfts, setSelectedGalleryNfts] = useState<Set<string>>(new Set());
   
   // Trade state
   const [bagNfts, setBagNfts] = useState<Set<string>>(new Set());
@@ -115,7 +113,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
   
   // Mint state (for memes and GIFs)
   const [mintMode, setMintMode] = useState<'meme' | 'gif' | null>(null);
-  const [mintAction, setMintAction] = useState<'cast' | 'mint' | 'sell'>('cast'); // cast=free share, mint=own it, sell=list for sale
+  const [mintAction, setMintAction] = useState<'cast' | 'mint'>('cast'); // cast=share, mint=own it
   const [mintCoin, setMintCoin] = useState<Memecoin>(MEMECOINS[1]); // Default to DEGEN
   const [mintPrice, setMintPrice] = useState('10000'); // Default 10k tokens
   const [mintStep, setMintStep] = useState<'idle' | 'uploading' | 'signing' | 'done' | 'error'>('idle');
@@ -154,29 +152,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
     }
   }, [hiddenNfts, currentUserFid]);
 
-  // Load Top 3 selections
-  useEffect(() => {
-    if (currentUserFid && !hasLoadedTop3.current) {
-      hasLoadedTop3.current = true;
-      try {
-        const stored = localStorage.getItem(getTop3StorageKey(currentUserFid));
-        if (stored) setSelectedNfts(new Set(JSON.parse(stored)));
-      } catch (e) {
-        console.error('Failed to load Top 3:', e);
-      }
-    }
-  }, [currentUserFid]);
-
-  // Save Top 3 selections
-  useEffect(() => {
-    if (currentUserFid && hasLoadedTop3.current) {
-      try {
-        localStorage.setItem(getTop3StorageKey(currentUserFid), JSON.stringify(Array.from(selectedNfts)));
-      } catch (e) {
-        console.error('Failed to save Top 3:', e);
-      }
-    }
-  }, [selectedNfts, currentUserFid]);
+  // (Top 3 storage removed)
 
   // Load meme templates (public API)
   useEffect(() => {
@@ -254,13 +230,39 @@ const [templateError, setTemplateError] = useState<string | null>(null);
   // Helper functions
   const getNftKey = (nft: NFT, index: number) => `${nft.tokenId}-${nft.collectionName}-${index}`;
   
-  const toggleSelectNft = (key: string) => {
-    setSelectedNfts(prev => {
+  const toggleGalleryNft = (key: string) => {
+    setSelectedGalleryNfts(prev => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
-      else if (next.size < 3) next.add(key);
+      else if (next.size < 12) next.add(key);
       return next;
     });
+  };
+
+  const castGalleryPoll = async () => {
+    if (!scanResults || selectedGalleryNfts.size < 2) return;
+    const selectedData = scanResults.nfts
+      .map((nft, i) => ({ nft, key: getNftKey(nft, i) }))
+      .filter(({ key }) => selectedGalleryNfts.has(key))
+      .slice(0, 12);
+
+    if (selectedData.length < 2) return;
+
+    const choices = selectedData.map(({ nft }, idx) => nft.name || `NFT ${idx + 1}`);
+    const pollParams = choices
+      .map((c) => `poll[choices][]=${encodeURIComponent(c.slice(0, 50))}`)
+      .join('&');
+
+    const castText = `Vote for your favorite Fiends (${choices.length} NFTs)`;
+    const composeUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(castText)}&${pollParams}`;
+
+    try {
+      if (sdk.actions.openUrl) {
+        await sdk.actions.openUrl(composeUrl);
+      }
+    } catch (e) {
+      await navigator.clipboard.writeText(`${castText}\n${choices.join(', ')}\n${composeUrl}`);
+    }
   };
 
   const toggleHideNft = (key: string) => {
@@ -367,7 +369,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
       // Build cast text
       const nftCount = selectedNftsData.length;
       const priceDisplay = bagCurrency === 'USDC' ? `$${bagPrice} USDC` : `${bagPrice} ETH`;
-      const castText = `🛍️ NFT Bundle for Sale!\n\n${nftCount} NFT${nftCount > 1 ? 's' : ''} for ${priceDisplay}\n\nPowered by Seaport 🌊`;
+      const castText = `Buy My Bags – shiny jpegs for sale, come and get 'em.\n${nftCount} NFT${nftCount > 1 ? 's' : ''} for ${priceDisplay}\nSeaport on Base.`;
 
       setListingStep('done');
 
@@ -561,7 +563,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
     }));
     
     const gifUrl = `${window.location.origin}/gif?data=${encoded}`;
-    const castText = `Check out my NFT GIF! 🎬`;
+    const castText = `Check out my NFT GIF`;
     
     try {
       if (sdk.actions.composeCast) {
@@ -597,7 +599,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
     }));
     
     const memeUrl = `${window.location.origin}/meme?data=${encoded}`;
-    const castText = `check out the meme I made with My BASED NFT's 😂`;
+    const castText = `Check out the meme I made with My Based NFTs`;
     
     try {
       if (sdk.actions.composeCast) {
@@ -645,7 +647,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
     setMintError(null);
   };
 
-  // Execute the action (cast, mint, or sell)
+// Execute the action (cast or mint)
   const executeMint = async () => {
     if (!scanResults || !currentUserFid) return;
 
@@ -787,7 +789,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
     const embed = mintResult.ipfsUrl || '';
 
     if (mintAction === 'cast') {
-      const castText = `Check out this ${contentType} I made with My Based NFTs! 🎨`;
+    const castText = `Check out this ${contentType} I made with My Based NFTs`;
       try {
         if (sdk.actions.composeCast) {
           await sdk.actions.composeCast({ text: castText, embeds: [embed] });
@@ -805,54 +807,9 @@ const [templateError, setTemplateError] = useState<string | null>(null);
       } catch (e) {
         await navigator.clipboard.writeText(`${castText}\n\n${embed}`);
       }
-    } else if (mintAction === 'sell') {
-      const priceDisplay = formatPrice(mintPrice, mintCoin.decimals);
-      const castText = `🎨 ${contentType.toUpperCase()} for sale on Zora (Base)\n💰 ${priceDisplay} $${mintCoin.symbol}\nNo custody; Zora contract.\n${embed}`;
-      try {
-        if (sdk.actions.composeCast) {
-          await sdk.actions.composeCast({ text: castText, embeds: [embed] });
-        }
-      } catch (e) {
-        await navigator.clipboard.writeText(`${castText}\n\n${embed}`);
-      }
     }
     
     cancelMint();
-  };
-
-  // Cast triptych
-  const castTriptych = async () => {
-    if (selectedNfts.size !== 3 || !currentUserFid || !scanResults) return;
-    
-    const selectedData = scanResults.nfts
-      .map((nft, i) => ({ nft, key: getNftKey(nft, i) }))
-      .filter(({ key }) => selectedNfts.has(key))
-      .map(({ nft }) => ({ image: nft.image, name: nft.name, collection: nft.collectionName }));
-    
-    if (selectedData.length !== 3) return;
-    
-    const encoded = btoa(JSON.stringify({
-      fid: currentUserFid,
-      user: scanResults.user,
-      displayName: scanResults.displayName,
-      pfp: scanResults.pfp,
-      nfts: selectedData,
-    }));
-    
-    const triptychUrl = `${window.location.origin}/triptych?data=${encoded}`;
-    const castText = `Check out my Top 3 NFTs! 🌟`;
-    
-    try {
-      if (sdk.actions.composeCast) {
-        await sdk.actions.composeCast({ text: castText, embeds: [triptychUrl] });
-      } else {
-        const composeUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(castText)}&embeds[]=${encodeURIComponent(triptychUrl)}`;
-        await sdk.actions.openUrl(composeUrl);
-      }
-    } catch {
-      await navigator.clipboard.writeText(`${castText}\n\n${triptychUrl}`);
-      alert('Cast text copied to clipboard!');
-    }
   };
 
   // Scan by FID
@@ -909,7 +866,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
     const visibleNfts = scanResults.nfts.filter((nft, i) => !hiddenNfts.has(getNftKey(nft, i)));
     const hiddenNftsList = scanResults.nfts.filter((nft, i) => hiddenNfts.has(getNftKey(nft, i)));
 
-  return (
+    return (
       <div className="space-y-4">
         {/* NFT Grid */}
         {visibleNfts.length > 0 ? (
@@ -977,6 +934,29 @@ const [templateError, setTemplateError] = useState<string | null>(null);
             )}
           </div>
         )}
+
+        {/* Waitlist CTA */}
+        <div className="bg-[rgba(12,10,20,0.7)] rounded-xl border border-[#8C52FF]/60 shadow-[0_16px_50px_rgba(0,0,0,0.45)] backdrop-blur-lg p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <svg className="h-5 w-5 text-[#8C52FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            <div>
+              <p className="text-white font-semibold">Join the Ether Fiends PFP Waitlist</p>
+              <p className="text-slate-400 text-sm">Be first to mint the upcoming collection.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSf_waitlist_example/viewform';
+              const url = currentUserFid ? `${baseUrl}?entry.123456789=${currentUserFid}` : baseUrl;
+              if (sdk.actions.openUrl) sdk.actions.openUrl(url); else window.open(url, '_blank');
+            }}
+            className="w-full py-3 rounded-lg bg-[#8C52FF] hover:bg-[#7b47e5] text-white font-semibold transition-colors"
+          >
+            Join Waitlist
+          </button>
+        </div>
       </div>
     );
   };
@@ -986,15 +966,16 @@ const [templateError, setTemplateError] = useState<string | null>(null);
     
     return (
       <div className="space-y-6">
-        {/* Buy This Bag */}
+        {/* Shill Your Sh*t */}
         <div className="bg-gradient-to-br from-green-900/20 to-slate-900 p-4 rounded-xl border border-green-500/30">
           <div className="flex items-center gap-2 mb-2">
             <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
             </svg>
-            <h3 className="font-bold text-white">Buy This Bag</h3>
+            <h3 className="font-bold text-white">Shill Your Sh*t</h3>
           </div>
-          <p className="text-slate-400 text-sm mb-4">Select up to 10 NFTs to bundle and sell</p>
+          <p className="text-slate-400 text-sm mb-1">Select up to 10 NFTs to bundle and sell.</p>
+          <p className="text-[11px] text-slate-500 mb-4">Cast message: “Buy My Bags – shiny jpegs for sale, come and get 'em” with price + ticker.</p>
           
           <div className="flex items-center justify-between mb-3">
             <span className="text-slate-400 text-sm">Selected: <span className="text-green-400 font-bold">{bagNfts.size}/10</span></span>
@@ -1379,7 +1360,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
             </svg>
-            Cast, Mint or List for Sale
+            Cast or Mint
           </button>
         </div>
 
@@ -1507,7 +1488,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
           )}
 
           {/* Generated GIF preview & actions */}
-          {generatedGif && (
+          {generatedGif && mintStep !== 'done' && (
             <div className="mb-4">
               <p className="text-green-400 text-xs uppercase mb-2 flex items-center gap-1">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1522,23 +1503,6 @@ const [templateError, setTemplateError] = useState<string | null>(null);
                   className="w-full h-full object-contain"
                 />
               </div>
-              <div className="flex gap-2 mb-2">
-                <button 
-                  onClick={downloadGif}
-                  className="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium flex items-center justify-center gap-2"
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Download GIF
-                </button>
-                <button 
-                  onClick={() => setGeneratedGif(null)}
-                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg"
-                >
-                  ✕
-                </button>
-              </div>
             </div>
           )}
 
@@ -1552,71 +1516,78 @@ const [templateError, setTemplateError] = useState<string | null>(null);
                   ? 'bg-gradient-to-r from-[#8C52FF] to-[#E53935] hover:from-[#7b47e5] hover:to-[#c7312f] text-white shadow-lg shadow-[#8C52FF]/30'
                   : 'bg-slate-700/50 text-white/50 cursor-not-allowed'
               }`}
-              title={generatedGif ? "Cast, Mint or List" : "Generate GIF first"}
+              title={generatedGif ? "Cast or Mint" : "Generate GIF first"}
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
               </svg>
-              Cast, Mint or List for Sale
+              Cast or Mint
             </button>
           </div>
           {!generatedGif && gifNfts.size >= 2 && (
             <p className="text-slate-500 text-xs mt-2 text-center">
-              Generate GIF first, then share or sell it
+              Generate GIF first, then share or mint it
             </p>
           )}
         </div>
 
-        {/* Top 3 Curator (moved lower, above slideshow) */}
-        <div className="bg-[rgba(12,10,20,0.65)] p-4 rounded-xl border border-[#E53935]/50 shadow-[0_14px_40px_rgba(0,0,0,0.35)] backdrop-blur">
+        <div className="bg-[rgba(12,10,20,0.7)] p-4 rounded-xl border border-[#8C52FF]/60 shadow-[0_16px_50px_rgba(0,0,0,0.45)] backdrop-blur-lg">
           <div className="flex items-center gap-2 mb-2">
-            <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            <svg className="h-5 w-5 text-[#8C52FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
-            <h3 className="font-bold text-white">Top 3 Curator</h3>
+            <h3 className="font-bold text-white">Gallery Poll</h3>
           </div>
-          <p className="text-slate-400 text-sm mb-3">Select your 3 favorite NFTs to share</p>
+          <p className="text-slate-400 text-sm mb-2">Pick 2–12 NFTs and create a Farcaster poll so followers can vote.</p>
+          <p className="text-[11px] text-slate-500 mb-3">We include the NFT names as poll choices.</p>
           
-          {/* Selection counter and Cast button */}
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-slate-400 text-sm">Selected: <span className={`font-bold ${selectedNfts.size === 3 ? 'text-[#8C52FF]' : 'text-[#E53935]'}`}>{selectedNfts.size}/3</span></span>
-              {selectedNfts.size > 0 && (
-                <button 
-                  onClick={() => setSelectedNfts(new Set())}
-                  className="text-slate-500 hover:text-red-400 text-xs underline"
-                >
-                  Clear
-                </button>
-              )}
+            <div className="text-slate-400 text-sm">
+              Selected: <span className="font-bold text-[#8C52FF]">{selectedGalleryNfts.size}</span>/12
             </div>
-            {selectedNfts.size === 3 && (
-              <button onClick={castTriptych} className="px-4 py-2 bg-[#E53935] hover:bg-[#c7312f] text-white rounded-lg text-sm font-bold flex items-center gap-2">
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                Cast Top 3
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setSelectedGalleryNfts(new Set())}
+                className="text-slate-500 hover:text-[#E53935] text-xs underline"
+              >
+                Clear
               </button>
-            )}
+              <button 
+                onClick={castGalleryPoll}
+                disabled={selectedGalleryNfts.size < 2}
+                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors ${
+                  selectedGalleryNfts.size >= 2
+                    ? 'bg-[#8C52FF] hover:bg-[#7b47e5] text-white'
+                    : 'bg-slate-700 text-white/50 cursor-not-allowed'
+                }`}
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v2h6v-2M7 9l5-5 5 5M12 4v13" />
+                </svg>
+                Create Poll
+              </button>
+            </div>
           </div>
 
-          {/* Mini NFT selector grid */}
-          <div className="grid grid-cols-5 gap-2">
-            {scanResults.nfts.slice(0, 15).map((nft, i) => {
+          <div className="grid grid-cols-4 gap-2">
+            {scanResults.nfts.slice(0, 20).map((nft, i) => {
               const key = getNftKey(nft, i);
               if (hiddenNfts.has(key)) return null;
-              const isSelected = selectedNfts.has(key);
-              const selectionOrder = isSelected ? Array.from(selectedNfts).indexOf(key) + 1 : null;
+              const isSelected = selectedGalleryNfts.has(key);
+              const selectionOrder = isSelected ? Array.from(selectedGalleryNfts).indexOf(key) + 1 : null;
+              const disabled = selectedGalleryNfts.size >= 12 && !isSelected;
               return (
                 <button
                   key={key}
-                  onClick={() => toggleSelectNft(key)}
-                  disabled={selectedNfts.size >= 3 && !isSelected}
+                  onClick={() => toggleGalleryNft(key)}
+                  disabled={disabled}
                   className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                    isSelected ? 'border-[#E53935] ring-2 ring-[#E53935]/40' : 'border-slate-700 hover:border-[#E53935]/40'
-                  } ${selectedNfts.size >= 3 && !isSelected ? 'opacity-30' : ''}`}
+                    isSelected ? 'border-[#8C52FF] ring-2 ring-[#8C52FF]/40' : 'border-slate-700 hover:border-[#8C52FF]/40'
+                  } ${disabled ? 'opacity-30 cursor-not-allowed' : ''}`}
                 >
                   <img src={nft.image} alt={nft.name} className="w-full h-full object-cover" />
                   {isSelected && selectionOrder && (
-                    <div className="absolute top-0 right-0 w-5 h-5 bg-yellow-500 rounded-bl-lg flex items-center justify-center">
+                    <div className="absolute top-0 right-0 w-5 h-5 bg-[#8C52FF] rounded-bl-lg flex items-center justify-center">
                       <span className="text-black text-xs font-bold">{selectionOrder}</span>
                     </div>
                   )}
@@ -1660,6 +1631,29 @@ const [templateError, setTemplateError] = useState<string | null>(null);
           <p className="text-slate-500 text-xs mt-2 text-center">
             {scanResults.nfts.filter((_, i) => !hiddenNfts.has(getNftKey(scanResults.nfts[i], i))).length} NFTs • Auto-advances every 4s
           </p>
+        </div>
+
+        {/* Waitlist CTA */}
+        <div className="bg-[rgba(12,10,20,0.7)] rounded-xl border border-[#8C52FF]/60 shadow-[0_16px_50px_rgba(0,0,0,0.45)] backdrop-blur-lg p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <svg className="h-5 w-5 text-[#8C52FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            <div>
+              <p className="text-white font-semibold">Join the Ether Fiends PFP Waitlist</p>
+              <p className="text-slate-400 text-sm">Be first to mint the upcoming collection.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const baseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSf_waitlist_example/viewform';
+              const url = currentUserFid ? `${baseUrl}?entry.123456789=${currentUserFid}` : baseUrl;
+              if (sdk.actions.openUrl) sdk.actions.openUrl(url); else window.open(url, '_blank');
+            }}
+            className="w-full py-3 rounded-lg bg-[#8C52FF] hover:bg-[#7b47e5] text-white font-semibold transition-colors"
+          >
+            Join Waitlist
+          </button>
         </div>
       </div>
     );
@@ -1765,7 +1759,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
         )}
       </div>
 
-      {/* Action Modal - Cast, Mint, or Sell */}
+      {/* Action Modal - Cast or Mint */}
       {mintMode && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 rounded-2xl border border-slate-700 w-full max-w-md max-h-[90vh] overflow-y-auto">
@@ -1880,42 +1874,6 @@ const [templateError, setTemplateError] = useState<string | null>(null);
                     </div>
                   </button>
 
-                  {/* Sell option */}
-                  <button
-                    onClick={() => setMintAction('sell')}
-                    className={`w-full p-3 rounded-xl border-2 transition-all text-left ${
-                      mintAction === 'sell'
-                        ? 'border-orange-500 bg-orange-500/10'
-                        : 'border-slate-700 hover:border-slate-600'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        mintAction === 'sell' ? 'bg-gradient-to-br from-orange-500 to-pink-500' : 'bg-slate-800'
-                      }`}>
-                        <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-semibold text-white">Sell for Memecoins</p>
-                        <p className="text-slate-400 text-sm">List for any Base token</p>
-                      </div>
-                      <span className="text-orange-400 text-sm font-medium">💰</span>
-                    </div>
-                  </button>
-                </div>
-              )}
-
-              {/* Memecoin selector - only show for sell action */}
-              {mintStep === 'idle' && mintAction === 'sell' && (
-                <div className="pt-2">
-                  <MemecoinSelector
-                    selectedCoin={mintCoin}
-                    price={mintPrice}
-                    onCoinChange={setMintCoin}
-                    onPriceChange={setMintPrice}
-                  />
                 </div>
               )}
 
@@ -1925,12 +1883,8 @@ const [templateError, setTemplateError] = useState<string | null>(null);
                   <div className="flex items-center gap-3">
                     <span className="animate-spin h-6 w-6 border-2 border-purple-500 border-t-transparent rounded-full"></span>
                     <div>
-                      <p className="text-white font-medium">
-                        {mintStep === 'uploading' ? 'Uploading to IPFS...' : 'Creating listing...'}
-                      </p>
-                      <p className="text-slate-400 text-sm">
-                        Making your creation permanent
-                      </p>
+                      <p className="text-white font-medium">Working...</p>
+                      <p className="text-slate-400 text-sm">Making your creation permanent</p>
                     </div>
                   </div>
                 </div>
@@ -1980,16 +1934,6 @@ const [templateError, setTemplateError] = useState<string | null>(null);
                   </div>
                   )}
                   
-                  {mintAction === 'sell' && (
-                    <div className="bg-orange-900/20 border border-orange-500/30 rounded-xl p-3">
-                      <p className="text-orange-300 text-sm">
-                        <strong>Price:</strong> {formatPrice(mintPrice, mintCoin.decimals)} ${mintCoin.symbol}
-                      </p>
-                      <p className="text-slate-400 text-xs mt-1">
-                        Share your listing on Farcaster to find buyers.
-                      </p>
-              </div>
-                  )}
                 </div>
               )}
 
@@ -2062,15 +2006,13 @@ const [templateError, setTemplateError] = useState<string | null>(null);
               ) : (
                 <button 
                   onClick={executeMint}
-                  disabled={mintStep === 'uploading' || mintStep === 'signing' || (mintAction === 'sell' && (!mintPrice || parseFloat(mintPrice) <= 0))}
+                  disabled={mintStep === 'uploading' || mintStep === 'signing'}
                   className={`w-full py-3.5 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
                     mintStep === 'uploading' || mintStep === 'signing'
                       ? 'bg-purple-500/50 text-white/70 cursor-wait'
                       : mintAction === 'cast'
                         ? 'bg-purple-500 hover:bg-purple-600 text-white'
-                        : mintAction === 'mint'
-                          ? 'bg-cyan-500 hover:bg-cyan-600 text-white'
-                          : 'bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white'
+                        : 'bg-cyan-500 hover:bg-cyan-600 text-white'
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   <>
@@ -2081,13 +2023,11 @@ const [templateError, setTemplateError] = useState<string | null>(null);
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                       </svg>
                     )}
-                    {mintStep === 'uploading' || mintStep === 'signing'
-                      ? 'Working...'
-                      : mintAction === 'cast'
-                        ? 'Cast to Farcaster'
-                        : mintAction === 'mint'
-                          ? 'Mint (Zora contract, Base)'
-                          : 'Offer for Sale'}
+                  {mintStep === 'uploading' || mintStep === 'signing'
+                    ? 'Working...'
+                    : mintAction === 'cast'
+                      ? 'Cast to Farcaster'
+                      : 'Mint (Zora contract, Base)'}
                   </>
                 </button>
               )}
