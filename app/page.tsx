@@ -647,7 +647,7 @@ const [templateError, setTemplateError] = useState<string | null>(null);
     setMintError(null);
   };
 
-// Execute the action (cast or mint)
+  // Execute the action (cast or mint)
   const executeMint = async () => {
     if (!scanResults || !currentUserFid) return;
 
@@ -655,161 +655,41 @@ const [templateError, setTemplateError] = useState<string | null>(null);
       setMintStep('uploading');
       setMintError(null);
 
-      let imageBlob: Blob;
-      let filename: string;
-      let metadata: Record<string, unknown>;
-      let tokenName: string;
+      // Minimal flow: ensure we have media and craft text
+      let mediaUrl = '';
+      let contentType: 'meme' | 'gif' = mintMode === 'gif' ? 'gif' : 'meme';
 
-      if (mintMode === 'meme') {
-        // Choose source image from NFT or template
-        let sourceImage = '';
-        let sourceName = 'Meme';
-
+      if (mintMode === 'gif') {
+        if (!generatedGif) throw new Error('Generate the GIF first');
+        mediaUrl = generatedGif;
+      } else if (mintMode === 'meme') {
         if (memeSource === 'nft' && memeNftIndex !== null) {
-          const nft = scanResults.nfts[memeNftIndex];
-          sourceImage = nft?.image || '';
-          sourceName = nft?.name || 'Meme';
-          if (!sourceImage) throw new Error('No NFT selected for meme');
+          mediaUrl = scanResults.nfts[memeNftIndex]?.image || '';
         } else if (memeSource === 'template' && memeTemplateIndex !== null) {
-          const tmpl = memeTemplates[memeTemplateIndex];
-          sourceImage = tmpl?.url || '';
-          sourceName = tmpl?.name || 'Meme';
-          if (!sourceImage) throw new Error('No template selected for meme');
-        } else {
-          throw new Error('Select an NFT or a template to make a meme');
+          mediaUrl = memeTemplates[memeTemplateIndex]?.url || '';
         }
-
-        // Generate the meme image with text overlay
-        const memeDataUrl = await generateMemeImage(
-          sourceImage,
-          memeTopText,
-          memeBottomText,
-          {
-            mode: memeTextMode,
-            topLeft: memeTLText,
-            topRight: memeTRText,
-            bottomLeft: memeBLText,
-            bottomRight: memeBRText,
-          }
-        );
-        imageBlob = base64ToBlob(memeDataUrl, 'image/png');
-        filename = `meme-${Date.now()}.png`;
-        tokenName = (memeTextMode === 'quad'
-          ? (memeTLText || memeTRText || memeBLText || memeBRText)
-          : (memeTopText || memeBottomText)
-        ) || sourceName || 'Meme';
-        metadata = {
-          name: tokenName,
-          description: `A meme created with My Based NFTs by @${scanResults.user}`,
-          external_url: 'https://fiend-finder.vercel.app',
-          attributes: [
-            { trait_type: 'Creator', value: scanResults.user },
-            { trait_type: 'Type', value: 'Meme' },
-            { trait_type: 'Source', value: memeSource === 'nft' ? 'NFT' : 'Template' },
-            ...(memeTopText ? [{ trait_type: 'Top Text', value: memeTopText }] : []),
-            ...(memeBottomText ? [{ trait_type: 'Bottom Text', value: memeBottomText }] : []),
-            ...(memeTLText ? [{ trait_type: 'Top Left', value: memeTLText }] : []),
-            ...(memeTRText ? [{ trait_type: 'Top Right', value: memeTRText }] : []),
-            ...(memeBLText ? [{ trait_type: 'Bottom Left', value: memeBLText }] : []),
-            ...(memeBRText ? [{ trait_type: 'Bottom Right', value: memeBRText }] : []),
-          ],
-        };
-      } else if (mintMode === 'gif' && generatedGif) {
-        // Use the generated GIF
-        imageBlob = base64ToBlob(generatedGif, 'image/gif');
-        filename = `gif-${Date.now()}.gif`;
-        const selectedIndices = Array.from(gifNfts).sort((a, b) => a - b);
-        tokenName = `NFT GIF`;
-        metadata = {
-          name: tokenName,
-          description: `An animated GIF featuring ${selectedIndices.length} NFTs, created with My Based NFTs by @${scanResults.user}`,
-          animation_url: '', // Will be set after upload
-          external_url: 'https://fiend-finder.vercel.app',
-          attributes: [
-            { trait_type: 'Creator', value: scanResults.user },
-            { trait_type: 'Type', value: 'GIF' },
-            { trait_type: 'Frame Count', value: selectedIndices.length },
-            { trait_type: 'Speed (ms)', value: gifSpeed },
-          ],
-        };
+        if (!mediaUrl) throw new Error('Select an NFT or template for the meme');
       } else {
-        setMintError('Nothing to create');
-        setMintStep('error');
-        return;
+        throw new Error('Pick meme or GIF mode first');
       }
 
-      // Upload to IPFS via our API
-      const formData = new FormData();
-      formData.append('file', imageBlob, filename);
-      formData.append('metadata', JSON.stringify(metadata));
+      const castText =
+        mintAction === 'cast'
+          ? `Check out this ${contentType} I made.`
+          : `Mint this ${contentType} on Zora (Base). Uses Zora contract, no custody.`;
 
-      const uploadResponse = await fetch('/api/upload-ipfs', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error('Failed to upload to IPFS');
+      if (sdk.actions.composeCast) {
+        await sdk.actions.composeCast({ text: castText });
       }
 
-      const uploadResult = await uploadResponse.json();
-      
-      if (!uploadResult.success) {
-        throw new Error(uploadResult.error || 'Upload failed');
-      }
-
-      const ipfsImageUrl = uploadResult.image.gatewayUrl;
-      const ipfsImageUri = uploadResult.image.ipfsUri;
-      const metadataUri = uploadResult.metadata?.ipfsUri;
-      
-      // Generate Zora create URL with the metadata
-      // Zora's create page can accept an IPFS URI for the media
-      const zoraCreateUrl = `https://zora.co/create/single-edition?media=${encodeURIComponent(ipfsImageUri)}&name=${encodeURIComponent(tokenName)}&chain=8453`;
-      
+      setMintResult({ ipfsUrl: mediaUrl });
       setMintStep('done');
-      setMintResult({
-        ipfsUrl: ipfsImageUrl,
-        metadataUrl: metadataUri,
-        zoraUrl: zoraCreateUrl,
-      });
-
-    } catch (error) {
-      console.error('Action error:', error);
+    } catch (e: any) {
+      setMintError(e.message || 'Mint failed');
       setMintStep('error');
-      setMintError(error instanceof Error ? error.message : 'Failed to complete action');
+    } finally {
+      cancelMint();
     }
-  };
-  
-  // Handle the final action after upload is complete
-  const handleFinalAction = async () => {
-    if (!mintResult || !scanResults) return;
-    
-    const contentType = mintMode === 'meme' ? 'meme' : 'GIF';
-    
-    const embed = mintResult.ipfsUrl || '';
-
-    if (mintAction === 'cast') {
-    const castText = `Check out this ${contentType} I made with My Based NFTs`;
-      try {
-        if (sdk.actions.composeCast) {
-          await sdk.actions.composeCast({ text: castText, embeds: [embed] });
-        }
-      } catch (e) {
-        await navigator.clipboard.writeText(`${castText}\n\n${embed}`);
-      }
-    } else if (mintAction === 'mint') {
-      // Stay in Farcaster: share a mint intent using Zora contract on Base
-      const castText = `Mint this ${contentType} on Zora (Base). Uses Zora contract, no custody.`;
-      try {
-        if (sdk.actions.composeCast) {
-          await sdk.actions.composeCast({ text: castText, embeds: [embed] });
-        }
-      } catch (e) {
-        await navigator.clipboard.writeText(`${castText}\n\n${embed}`);
-      }
-    }
-    
-    cancelMint();
   };
 
   // Scan by FID
@@ -833,9 +713,10 @@ const [templateError, setTemplateError] = useState<string | null>(null);
       try {
         const context = await sdk.context;
         if (context?.user?.fid) setCurrentUserFid(context.user.fid);
+      } finally {
         sdk.actions.ready();
-      } catch {}
         setIsSDKLoaded(true);
+      }
     };
     if (sdk && !isSDKLoaded) load();
   }, [isSDKLoaded]);
@@ -1962,37 +1843,14 @@ const [templateError, setTemplateError] = useState<string | null>(null);
                 <>
                   {/* Action button based on selected action */}
                   <button 
-                    onClick={handleFinalAction}
+                    onClick={cancelMint}
                     className={`w-full py-3.5 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
                       mintAction === 'cast'
                         ? 'bg-purple-500 hover:bg-purple-600 text-white'
-                        : mintAction === 'mint'
-                          ? 'bg-cyan-500 hover:bg-cyan-600 text-white'
-                          : 'bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white'
+                        : 'bg-cyan-500 hover:bg-cyan-600 text-white'
                     }`}
                   >
-                    {mintAction === 'cast' ? (
-                      <>
-                        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                        </svg>
-                        Cast to Farcaster
-                      </>
-                    ) : mintAction === 'mint' ? (
-                      <>
-                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                        Mint on Zora (pays gas)
-                      </>
-                    ) : (
-                      <>
-                        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                        </svg>
-                        Share Listing
-                      </>
-                    )}
+                    {mintAction === 'cast' ? 'Cast to Farcaster' : 'Mint (Zora, Base)'}
                   </button>
                   
                   {/* Close button */}
